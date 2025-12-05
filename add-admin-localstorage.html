@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Adicionar Admin ao LocalStorage</title>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+</head>
+<body>
+  <h1>Adicionar Usuário Admin</h1>
+  <script>
+    async function addAdmin() {
+      const email = 'leticia.silva.l1998@gmail.com';
+      const password = 'Bombom@8100';
+      
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const newUser = {
+        id: generateId(),
+        email,
+        password: hashedPassword,
+        name: 'Letícia Silva',
+        role: 'admin',
+        setor: 'Administração',
+        createdAt: new Date().toISOString(),
+        authorizedCompanyIds: []
+      };
+      
+      localStorage.setItem(`user:${email}`, JSON.stringify(newUser));
+      
+      const usersList = JSON.parse(localStorage.getItem('users:list') || '[]');
+      if (!usersList.includes(email)) {
+        usersList.push(email);
+        localStorage.setItem('users:list', JSON.stringify(usersList));
+      }
+      
+      console.log('✅ Usuário administrador criado com sucesso!');
+      console.log('📧 Email:', email);
+      console.log('🔑 Senha: Bombom@8100');
+      alert('Usuário admin criado! Verifique o console.');
+    }
+    
+    addAdmin();
+  </script>
+</body>
+</html>

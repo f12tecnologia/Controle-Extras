@@ -1,23 +1,34 @@
 
-import Database from "@replit/database";
 import bcrypt from 'bcryptjs';
-
-const db = new Database();
 
 // Helper para gerar IDs únicos
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Simulação de cliente Supabase usando Replit Database
+// Simulação de armazenamento usando localStorage
+const storage = {
+  get: async (key) => {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  },
+  set: async (key, value) => {
+    localStorage.setItem(key, JSON.stringify(value));
+  },
+  delete: async (key) => {
+    localStorage.removeItem(key);
+  }
+};
+
+// Simulação de cliente Supabase usando localStorage
 export const supabase = {
   auth: {
     getSession: async () => {
-      const sessionData = await db.get('current_session');
+      const sessionData = await storage.get('current_session');
       return { data: { session: sessionData }, error: null };
     },
     
     signInWithPassword: async ({ email, password }) => {
       try {
-        const user = await db.get(`user:${email}`);
+        const user = await storage.get(`user:${email}`);
         
         if (!user) {
           return { 
@@ -48,7 +59,7 @@ export const supabase = {
           access_token: generateId()
         };
         
-        await db.set('current_session', session);
+        await storage.set('current_session', session);
         
         return { data: { session }, error: null };
       } catch (error) {
@@ -58,7 +69,7 @@ export const supabase = {
     
     signUp: async ({ email, password, options }) => {
       try {
-        const existingUser = await db.get(`user:${email}`);
+        const existingUser = await storage.get(`user:${email}`);
         
         if (existingUser) {
           return { 
@@ -80,11 +91,11 @@ export const supabase = {
           authorizedCompanyIds: []
         };
         
-        await db.set(`user:${email}`, newUser);
+        await storage.set(`user:${email}`, newUser);
         
-        const usersList = await db.get('users:list') || [];
+        const usersList = await storage.get('users:list') || [];
         usersList.push(email);
-        await db.set('users:list', usersList);
+        await storage.set('users:list', usersList);
         
         return { 
           data: { 
@@ -106,27 +117,27 @@ export const supabase = {
     },
     
     signOut: async () => {
-      await db.delete('current_session');
+      await storage.delete('current_session');
       return { error: null };
     },
     
     getUser: async () => {
-      const session = await db.get('current_session');
+      const session = await storage.get('current_session');
       return { data: { user: session?.user || null }, error: null };
     },
     
     updateUser: async ({ password }) => {
       try {
-        const session = await db.get('current_session');
+        const session = await storage.get('current_session');
         if (!session?.user) {
           return { data: null, error: { message: 'Não autenticado' } };
         }
         
-        const user = await db.get(`user:${session.user.email}`);
+        const user = await storage.get(`user:${session.user.email}`);
         const hashedPassword = await bcrypt.hash(password, 10);
         
         user.password = hashedPassword;
-        await db.set(`user:${session.user.email}`, user);
+        await storage.set(`user:${session.user.email}`, user);
         
         return { data: { user: session.user }, error: null };
       } catch (error) {
@@ -135,7 +146,7 @@ export const supabase = {
     },
     
     resetPasswordForEmail: async (email) => {
-      const user = await db.get(`user:${email}`);
+      const user = await storage.get(`user:${email}`);
       if (!user) {
         return { error: { message: 'Email não encontrado' } };
       }
@@ -167,11 +178,11 @@ export const supabase = {
       
       listUsers: async () => {
         try {
-          const usersList = await db.get('users:list') || [];
+          const usersList = await storage.get('users:list') || [];
           const users = [];
           
           for (const email of usersList) {
-            const user = await db.get(`user:${email}`);
+            const user = await storage.get(`user:${email}`);
             if (user) {
               users.push({
                 id: user.id,
@@ -193,14 +204,14 @@ export const supabase = {
       
       deleteUser: async (userId) => {
         try {
-          const usersList = await db.get('users:list') || [];
+          const usersList = await storage.get('users:list') || [];
           
           for (const email of usersList) {
-            const user = await db.get(`user:${email}`);
+            const user = await storage.get(`user:${email}`);
             if (user?.id === userId) {
-              await db.delete(`user:${email}`);
+              await storage.delete(`user:${email}`);
               const updatedList = usersList.filter(e => e !== email);
-              await db.set('users:list', updatedList);
+              await storage.set('users:list', updatedList);
               return { data: {}, error: null };
             }
           }
@@ -213,17 +224,17 @@ export const supabase = {
       
       updateUserById: async (userId, updates) => {
         try {
-          const usersList = await db.get('users:list') || [];
+          const usersList = await storage.get('users:list') || [];
           
           for (const email of usersList) {
-            const user = await db.get(`user:${email}`);
+            const user = await storage.get(`user:${email}`);
             if (user?.id === userId) {
               if (updates.user_metadata) {
                 user.name = updates.user_metadata.name || user.name;
                 user.role = updates.user_metadata.role || user.role;
                 user.setor = updates.user_metadata.setor || user.setor;
               }
-              await db.set(`user:${email}`, user);
+              await storage.set(`user:${email}`, user);
               return { data: { user }, error: null };
             }
           }
@@ -238,12 +249,12 @@ export const supabase = {
   
   from: (table) => ({
     select: async (columns = '*') => {
-      const data = await db.get(`table:${table}`) || [];
+      const data = await storage.get(`table:${table}`) || [];
       return { data, error: null };
     },
     
     insert: async (records) => {
-      const tableData = await db.get(`table:${table}`) || [];
+      const tableData = await storage.get(`table:${table}`) || [];
       const recordsArray = Array.isArray(records) ? records : [records];
       
       const newRecords = recordsArray.map(record => ({
@@ -252,27 +263,27 @@ export const supabase = {
       }));
       
       tableData.push(...newRecords);
-      await db.set(`table:${table}`, tableData);
+      await storage.set(`table:${table}`, tableData);
       
       return { data: newRecords, error: null };
     },
     
     update: async (updates) => ({
       eq: async (column, value) => {
-        const tableData = await db.get(`table:${table}`) || [];
+        const tableData = await storage.get(`table:${table}`) || [];
         const updated = tableData.map(record => 
           record[column] === value ? { ...record, ...updates } : record
         );
-        await db.set(`table:${table}`, updated);
+        await storage.set(`table:${table}`, updated);
         return { data: updated, error: null };
       }
     }),
     
     delete: async () => ({
       eq: async (column, value) => {
-        const tableData = await db.get(`table:${table}`) || [];
+        const tableData = await storage.get(`table:${table}`) || [];
         const filtered = tableData.filter(record => record[column] !== value);
-        await db.set(`table:${table}`, filtered);
+        await storage.set(`table:${table}`, filtered);
         return { data: filtered, error: null };
       }
     })

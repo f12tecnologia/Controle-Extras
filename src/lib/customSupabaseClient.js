@@ -150,7 +150,6 @@ export const supabase = {
       if (!user) {
         return { error: { message: 'Email não encontrado' } };
       }
-      // Simular envio de email
       console.log(`Email de recuperação enviado para ${email}`);
       return { data: {}, error: null };
     },

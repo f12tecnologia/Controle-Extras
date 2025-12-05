@@ -3,41 +3,108 @@
 <html>
 <head>
   <title>Adicionar Admin ao LocalStorage</title>
-  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+    }
+    h1 { text-align: center; }
+    .info { 
+      background: rgba(255, 255, 255, 0.2);
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .success {
+      background: rgba(76, 175, 80, 0.3);
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
 </head>
 <body>
-  <h1>Adicionar Usuário Admin</h1>
+  <div class="container">
+    <h1>🔧 Configurar Usuário Admin</h1>
+    <div id="result"></div>
+  </div>
+  
   <script>
+    async function simpleHash(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password + 'salt-key-2025');
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    
     async function addAdmin() {
+      const resultDiv = document.getElementById('result');
       const email = 'leticia.silva.l1998@gmail.com';
       const password = 'Bombom@8100';
       
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newUser = {
-        id: generateId(),
-        email,
-        password: hashedPassword,
-        name: 'Letícia Silva',
-        role: 'admin',
-        setor: 'Administração',
-        createdAt: new Date().toISOString(),
-        authorizedCompanyIds: []
-      };
-      
-      localStorage.setItem(`user:${email}`, JSON.stringify(newUser));
-      
-      const usersList = JSON.parse(localStorage.getItem('users:list') || '[]');
-      if (!usersList.includes(email)) {
-        usersList.push(email);
-        localStorage.setItem('users:list', JSON.stringify(usersList));
+      try {
+        const hashedPassword = await simpleHash(password);
+        const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const newUser = {
+          id: generateId(),
+          email,
+          password: hashedPassword,
+          name: 'Letícia Silva',
+          role: 'admin',
+          setor: 'Administração',
+          createdAt: new Date().toISOString(),
+          authorizedCompanyIds: []
+        };
+        
+        localStorage.setItem(`user:${email}`, JSON.stringify(newUser));
+        
+        const usersList = JSON.parse(localStorage.getItem('users:list') || '[]');
+        if (!usersList.includes(email)) {
+          usersList.push(email);
+          localStorage.setItem('users:list', JSON.stringify(usersList));
+        }
+        
+        resultDiv.innerHTML = `
+          <div class="success">
+            <h2>✅ Usuário Administrador Criado!</h2>
+            <div class="info">
+              <p><strong>📧 Email:</strong> ${email}</p>
+              <p><strong>👤 Nome:</strong> Letícia Silva</p>
+              <p><strong>🔑 Cargo:</strong> admin</p>
+              <p><strong>🏢 Setor:</strong> Administração</p>
+            </div>
+            <p style="margin-top: 20px; text-align: center;">
+              <a href="/login" style="color: #90cdf4; text-decoration: none; font-weight: bold;">
+                → Ir para Login
+              </a>
+            </p>
+          </div>
+        `;
+        
+        console.log('✅ Usuário administrador criado com sucesso!');
+        console.log('📧 Email:', email);
+        console.log('🔑 Senha: Bombom@8100');
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div style="background: rgba(244, 67, 54, 0.3); padding: 15px; border-radius: 5px;">
+            <h2>❌ Erro</h2>
+            <p>${error.message}</p>
+          </div>
+        `;
+        console.error('Erro ao criar usuário:', error);
       }
-      
-      console.log('✅ Usuário administrador criado com sucesso!');
-      console.log('📧 Email:', email);
-      console.log('🔑 Senha: Bombom@8100');
-      alert('Usuário admin criado! Verifique o console.');
     }
     
     addAdmin();

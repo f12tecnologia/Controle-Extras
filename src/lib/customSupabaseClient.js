@@ -1,8 +1,15 @@
 
-import bcrypt from 'bcryptjs';
-
 // Helper para gerar IDs únicos
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// Hash simples para senhas (para desenvolvimento)
+const simpleHash = async (password) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'salt-key-2025');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 // Simulação de armazenamento usando localStorage
 const storage = {
@@ -37,9 +44,9 @@ export const supabase = {
           };
         }
         
-        const isValid = await bcrypt.compare(password, user.password);
+        const hashedPassword = await simpleHash(password);
         
-        if (!isValid) {
+        if (hashedPassword !== user.password) {
           return { 
             data: null, 
             error: { message: 'Email ou senha inválidos.' } 
@@ -78,7 +85,7 @@ export const supabase = {
           };
         }
         
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await simpleHash(password);
         
         const newUser = {
           id: generateId(),
@@ -134,7 +141,7 @@ export const supabase = {
         }
         
         const user = await storage.get(`user:${session.user.email}`);
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await simpleHash(password);
         
         user.password = hashedPassword;
         await storage.set(`user:${session.user.email}`, user);

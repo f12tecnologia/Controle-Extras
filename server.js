@@ -8,6 +8,16 @@ const app = express();
 const db = new Database();
 const PORT = 3001;
 
+// Helper to extract value from Replit Database response
+const extractValue = (data) => {
+  if (!data) return null;
+  // Handle nested {ok: true, value: {...}} structure
+  if (data && typeof data === 'object' && 'ok' in data && 'value' in data) {
+    return extractValue(data.value);
+  }
+  return data;
+};
+
 // Configurar CORS para aceitar requisições do frontend
 app.use(cors({
   origin: true,
@@ -24,7 +34,8 @@ app.use((req, res, next) => {
 // User endpoints
 app.get('/api/users/:email', async (req, res) => {
   try {
-    const user = await db.get(`user:${req.params.email}`);
+    const rawUser = await db.get(`user:${req.params.email}`);
+    const user = extractValue(rawUser);
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -33,9 +44,16 @@ app.get('/api/users/:email', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    const usersList = await db.get('users:list') || [];
+    const rawList = await db.get('users:list');
+    const usersList = extractValue(rawList) || [];
+    if (!Array.isArray(usersList)) {
+      return res.json([]);
+    }
     const users = await Promise.all(
-      usersList.map(email => db.get(`user:${email}`))
+      usersList.map(async email => {
+        const rawUser = await db.get(`user:${email}`);
+        return extractValue(rawUser);
+      })
     );
     res.json(users.filter(u => u !== null));
   } catch (error) {
@@ -47,7 +65,8 @@ app.post('/api/users', async (req, res) => {
   try {
     const { email, password, name, role, setor, authorizedCompanyIds } = req.body;
     
-    const existingUser = await db.get(`user:${email}`);
+    const rawUser = await db.get(`user:${email}`);
+    const existingUser = extractValue(rawUser);
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -80,7 +99,8 @@ app.post('/api/users', async (req, res) => {
 
 app.put('/api/users/:email', async (req, res) => {
   try {
-    const user = await db.get(`user:${req.params.email}`);
+    const rawUser = await db.get(`user:${req.params.email}`);
+    const user = extractValue(rawUser);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -96,8 +116,9 @@ app.put('/api/users/:email', async (req, res) => {
 app.delete('/api/users/:email', async (req, res) => {
   try {
     await db.delete(`user:${req.params.email}`);
-    const usersList = await db.get('users:list') || [];
-    const filtered = usersList.filter(e => e !== req.params.email);
+    const rawList = await db.get('users:list');
+    const usersList = extractValue(rawList) || [];
+    const filtered = Array.isArray(usersList) ? usersList.filter(e => e !== req.params.email) : [];
     await db.set('users:list', filtered);
     res.json({ success: true });
   } catch (error) {
@@ -108,9 +129,16 @@ app.delete('/api/users/:email', async (req, res) => {
 // Company endpoints
 app.get('/api/companies', async (req, res) => {
   try {
-    const companiesList = await db.get('companies:list') || [];
+    const rawList = await db.get('companies:list');
+    const companiesList = extractValue(rawList) || [];
+    if (!Array.isArray(companiesList)) {
+      return res.json([]);
+    }
     const companies = await Promise.all(
-      companiesList.map(id => db.get(`company:${id}`))
+      companiesList.map(async id => {
+        const raw = await db.get(`company:${id}`);
+        return extractValue(raw);
+      })
     );
     res.json(companies.filter(c => c !== null));
   } catch (error) {
@@ -120,7 +148,8 @@ app.get('/api/companies', async (req, res) => {
 
 app.get('/api/companies/:id', async (req, res) => {
   try {
-    const company = await db.get(`company:${req.params.id}`);
+    const raw = await db.get(`company:${req.params.id}`);
+    const company = extractValue(raw);
     res.json(company);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -139,7 +168,9 @@ app.post('/api/companies', async (req, res) => {
     
     await db.set(`company:${id}`, company);
     
-    const companiesList = await db.get('companies:list') || [];
+    const rawList = await db.get('companies:list');
+    let companiesList = extractValue(rawList) || [];
+    if (!Array.isArray(companiesList)) companiesList = [];
     companiesList.push(id);
     await db.set('companies:list', companiesList);
     
@@ -151,7 +182,8 @@ app.post('/api/companies', async (req, res) => {
 
 app.put('/api/companies/:id', async (req, res) => {
   try {
-    const company = await db.get(`company:${req.params.id}`);
+    const raw = await db.get(`company:${req.params.id}`);
+    const company = extractValue(raw);
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
     }
@@ -167,7 +199,9 @@ app.put('/api/companies/:id', async (req, res) => {
 app.delete('/api/companies/:id', async (req, res) => {
   try {
     await db.delete(`company:${req.params.id}`);
-    const companiesList = await db.get('companies:list') || [];
+    const rawList = await db.get('companies:list');
+    let companiesList = extractValue(rawList) || [];
+    if (!Array.isArray(companiesList)) companiesList = [];
     const filtered = companiesList.filter(cId => cId !== req.params.id);
     await db.set('companies:list', filtered);
     res.json({ success: true });
@@ -179,9 +213,16 @@ app.delete('/api/companies/:id', async (req, res) => {
 // Employee endpoints
 app.get('/api/employees', async (req, res) => {
   try {
-    const employeesList = await db.get('employees:list') || [];
+    const rawList = await db.get('employees:list');
+    const employeesList = extractValue(rawList) || [];
+    if (!Array.isArray(employeesList)) {
+      return res.json([]);
+    }
     const employees = await Promise.all(
-      employeesList.map(id => db.get(`employee:${id}`))
+      employeesList.map(async id => {
+        const raw = await db.get(`employee:${id}`);
+        return extractValue(raw);
+      })
     );
     res.json(employees.filter(e => e !== null));
   } catch (error) {
@@ -191,7 +232,8 @@ app.get('/api/employees', async (req, res) => {
 
 app.get('/api/employees/:id', async (req, res) => {
   try {
-    const employee = await db.get(`employee:${req.params.id}`);
+    const raw = await db.get(`employee:${req.params.id}`);
+    const employee = extractValue(raw);
     res.json(employee);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -210,7 +252,9 @@ app.post('/api/employees', async (req, res) => {
     
     await db.set(`employee:${id}`, employee);
     
-    const employeesList = await db.get('employees:list') || [];
+    const rawList = await db.get('employees:list');
+    let employeesList = extractValue(rawList) || [];
+    if (!Array.isArray(employeesList)) employeesList = [];
     employeesList.push(id);
     await db.set('employees:list', employeesList);
     
@@ -222,7 +266,8 @@ app.post('/api/employees', async (req, res) => {
 
 app.put('/api/employees/:id', async (req, res) => {
   try {
-    const employee = await db.get(`employee:${req.params.id}`);
+    const raw = await db.get(`employee:${req.params.id}`);
+    const employee = extractValue(raw);
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
     }
@@ -238,7 +283,9 @@ app.put('/api/employees/:id', async (req, res) => {
 app.delete('/api/employees/:id', async (req, res) => {
   try {
     await db.delete(`employee:${req.params.id}`);
-    const employeesList = await db.get('employees:list') || [];
+    const rawList = await db.get('employees:list');
+    let employeesList = extractValue(rawList) || [];
+    if (!Array.isArray(employeesList)) employeesList = [];
     const filtered = employeesList.filter(eId => eId !== req.params.id);
     await db.set('employees:list', filtered);
     res.json({ success: true });
@@ -250,9 +297,16 @@ app.delete('/api/employees/:id', async (req, res) => {
 // Extras endpoints
 app.get('/api/extras', async (req, res) => {
   try {
-    const extrasList = await db.get('extras:list') || [];
+    const rawList = await db.get('extras:list');
+    const extrasList = extractValue(rawList) || [];
+    if (!Array.isArray(extrasList)) {
+      return res.json([]);
+    }
     const extras = await Promise.all(
-      extrasList.map(id => db.get(`extra:${id}`))
+      extrasList.map(async id => {
+        const raw = await db.get(`extra:${id}`);
+        return extractValue(raw);
+      })
     );
     res.json(extras.filter(e => e !== null));
   } catch (error) {
@@ -262,9 +316,16 @@ app.get('/api/extras', async (req, res) => {
 
 app.get('/api/extras/user/:userId', async (req, res) => {
   try {
-    const extrasList = await db.get('extras:list') || [];
+    const rawList = await db.get('extras:list');
+    const extrasList = extractValue(rawList) || [];
+    if (!Array.isArray(extrasList)) {
+      return res.json([]);
+    }
     const extras = await Promise.all(
-      extrasList.map(id => db.get(`extra:${id}`))
+      extrasList.map(async id => {
+        const raw = await db.get(`extra:${id}`);
+        return extractValue(raw);
+      })
     );
     const userExtras = extras.filter(e => e && e.user_id === req.params.userId);
     res.json(userExtras);
@@ -275,7 +336,8 @@ app.get('/api/extras/user/:userId', async (req, res) => {
 
 app.get('/api/extras/:id', async (req, res) => {
   try {
-    const extra = await db.get(`extra:${req.params.id}`);
+    const raw = await db.get(`extra:${req.params.id}`);
+    const extra = extractValue(raw);
     res.json(extra);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -294,7 +356,9 @@ app.post('/api/extras', async (req, res) => {
     
     await db.set(`extra:${id}`, extra);
     
-    const extrasList = await db.get('extras:list') || [];
+    const rawList = await db.get('extras:list');
+    let extrasList = extractValue(rawList) || [];
+    if (!Array.isArray(extrasList)) extrasList = [];
     extrasList.push(id);
     await db.set('extras:list', extrasList);
     
@@ -306,7 +370,8 @@ app.post('/api/extras', async (req, res) => {
 
 app.put('/api/extras/:id', async (req, res) => {
   try {
-    const extra = await db.get(`extra:${req.params.id}`);
+    const raw = await db.get(`extra:${req.params.id}`);
+    const extra = extractValue(raw);
     if (!extra) {
       return res.status(404).json({ error: 'Extra not found' });
     }
@@ -322,7 +387,9 @@ app.put('/api/extras/:id', async (req, res) => {
 app.delete('/api/extras/:id', async (req, res) => {
   try {
     await db.delete(`extra:${req.params.id}`);
-    const extrasList = await db.get('extras:list') || [];
+    const rawList = await db.get('extras:list');
+    let extrasList = extractValue(rawList) || [];
+    if (!Array.isArray(extrasList)) extrasList = [];
     const filtered = extrasList.filter(eId => eId !== req.params.id);
     await db.set('extras:list', filtered);
     res.json({ success: true });
@@ -333,13 +400,36 @@ app.delete('/api/extras/:id', async (req, res) => {
 
 app.get('/api/extras-with-details', async (req, res) => {
   try {
-    const extrasList = await db.get('extras:list') || [];
-    const employeesList = await db.get('employees:list') || [];
-    const companiesList = await db.get('companies:list') || [];
+    const rawExtrasList = await db.get('extras:list');
+    const rawEmployeesList = await db.get('employees:list');
+    const rawCompaniesList = await db.get('companies:list');
     
-    const extras = await Promise.all(extrasList.map(id => db.get(`extra:${id}`)));
-    const employees = await Promise.all(employeesList.map(id => db.get(`employee:${id}`)));
-    const companies = await Promise.all(companiesList.map(id => db.get(`company:${id}`)));
+    const extrasList = extractValue(rawExtrasList) || [];
+    const employeesList = extractValue(rawEmployeesList) || [];
+    const companiesList = extractValue(rawCompaniesList) || [];
+    
+    if (!Array.isArray(extrasList)) {
+      return res.json([]);
+    }
+    
+    const extras = await Promise.all(
+      (Array.isArray(extrasList) ? extrasList : []).map(async id => {
+        const raw = await db.get(`extra:${id}`);
+        return extractValue(raw);
+      })
+    );
+    const employees = await Promise.all(
+      (Array.isArray(employeesList) ? employeesList : []).map(async id => {
+        const raw = await db.get(`employee:${id}`);
+        return extractValue(raw);
+      })
+    );
+    const companies = await Promise.all(
+      (Array.isArray(companiesList) ? companiesList : []).map(async id => {
+        const raw = await db.get(`company:${id}`);
+        return extractValue(raw);
+      })
+    );
     
     const extrasWithDetails = extras.filter(e => e !== null).map(extra => {
       const employee = employees.find(e => e && e.id === extra.employee_id);

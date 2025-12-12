@@ -33,7 +33,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = user.user_metadata?.role;
+  const userRole = user.role || user.user_metadata?.role;
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
     return <Navigate to="/dashboard" replace />;

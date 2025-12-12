@@ -85,6 +85,14 @@ Configured for static site deployment on Replit:
 - Static files are served from the `dist` directory
 
 ## Recent Changes
+**December 12, 2025** - Database Migration & Bug Fixes:
+- Migrated from Supabase to Replit Database with custom Express.js backend API
+- Fixed `extractValue()` function to handle Replit Database's `{ok: true, value: {...}}` response format
+- Created admin user: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
+- Fixed role verification in App.jsx to support `user.role` property
+- Backend server runs on port 3001, frontend on port 5000
+- All CRUD endpoints (users, companies, employees, extras) properly handle data extraction
+
 **December 4, 2025** - Initial Replit Setup:
 - Changed dev server port from 3000 to 5000
 - Updated host from `::` to `0.0.0.0` for Replit compatibility

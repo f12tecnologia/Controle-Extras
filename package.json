@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5000",
+    "dev": "node server.js & vite --host 0.0.0.0 --port 5000",
+    "dev:frontend": "vite --host 0.0.0.0 --port 5000",
+    "dev:backend": "node server.js",
     "build": "node tools/generate-llms.js || true && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5000"
   },

@@ -1,5 +1,14 @@
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://0.0.0.0:3001/api';
+const getApiUrl = () => {
+  // Se estiver em desenvolvimento local, use localhost
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+  // Para Replit, use o mesmo host mas porta 3001
+  return `https://${window.location.hostname.replace(':5000', '')}:3001/api`;
+};
+
+const API_URL = import.meta.env.VITE_API_URL || getApiUrl();
 
 export const replitDb = {
   // User operations

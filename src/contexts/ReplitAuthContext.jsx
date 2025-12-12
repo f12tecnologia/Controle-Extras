@@ -2,38 +2,50 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import bcrypt from 'bcryptjs';
 import { replitDb } from '@/lib/replitDbClient';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
+  const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    // Check for existing session in localStorage
+    let isMounted = true;
+    
     const checkSession = async () => {
       const sessionData = localStorage.getItem('replit_auth_session');
       if (sessionData) {
         try {
           const parsed = JSON.parse(sessionData);
           const user = await replitDb.getUser(parsed.email);
-          if (user) {
-            setUser(user);
-            setSession(parsed);
-          } else {
-            localStorage.removeItem('replit_auth_session');
+          if (isMounted) {
+            if (user) {
+              setUser(user);
+              setSession(parsed);
+            } else {
+              localStorage.removeItem('replit_auth_session');
+            }
           }
         } catch (error) {
-          localStorage.removeItem('replit_auth_session');
+          if (isMounted) {
+            localStorage.removeItem('replit_auth_session');
+          }
         }
       }
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     checkSession();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const signUp = useCallback(async (email, password, options) => {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import bcrypt from 'bcryptjs';
 import { replitDb } from '@/lib/replitDbClient';
@@ -5,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const { toast } = useToast();
 
   const [user, setUser] = useState(null);
@@ -261,12 +262,12 @@ export const AuthProvider = ({ children }) => {
   }), [user, session, loading, isPasswordRecovery, signUp, signIn, signOut, sendPasswordResetEmail, updateUserPassword, changeUserPassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
-};
+}

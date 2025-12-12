@@ -2,13 +2,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import bcrypt from 'bcryptjs';
 import { replitDb } from '@/lib/replitDbClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
-  const { toast } = useToast();
-
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +79,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, [toast]);
+  }, []);
 
   const signIn = useCallback(async (email, password) => {
     try {
@@ -130,7 +128,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, [toast]);
+  }, []);
 
   const signOut = useCallback(async () => {
     localStorage.removeItem('replit_auth_session');
@@ -175,7 +173,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, [toast]);
+  }, []);
 
   const updateUserPassword = useCallback(async (newPassword) => {
     try {
@@ -212,7 +210,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, [toast]);
+  }, []);
 
   const changeUserPassword = useCallback(async (oldPassword, newPassword) => {
     try {
@@ -246,7 +244,7 @@ export function AuthProvider({ children }) {
       toast({ variant: "destructive", title: "Falha ao Salvar", description: error.message });
       return { error };
     }
-  }, [user, toast]);
+  }, [user]);
 
   const value = useMemo(() => ({
     user,

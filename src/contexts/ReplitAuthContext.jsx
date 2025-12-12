@@ -14,43 +14,41 @@ export function AuthProvider({ children }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    
     const checkSession = async () => {
-      const sessionData = localStorage.getItem('replit_auth_session');
-      if (sessionData) {
-        try {
+      try {
+        const sessionData = localStorage.getItem('replit_auth_session');
+        if (sessionData) {
           const parsed = JSON.parse(sessionData);
           const user = await replitDb.getUser(parsed.email);
-          if (isMounted) {
-            if (user) {
-              setUser(user);
-              setSession(parsed);
-            } else {
-              localStorage.removeItem('replit_auth_session');
-            }
-          }
-        } catch (error) {
-          if (isMounted) {
+          if (user) {
+            setUser(user);
+            setSession(parsed);
+          } else {
             localStorage.removeItem('replit_auth_session');
           }
         }
-      }
-      if (isMounted) {
+      } catch (error) {
+        localStorage.removeItem('replit_auth_session');
+      } finally {
         setLoading(false);
       }
     };
 
     checkSession();
-    
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const signUp = useCallback(async (email, password, options) => {
+    if (!email || !password) {
+      const error = { message: 'Email e senha são obrigatórios.' };
+      toast({
+        variant: "destructive",
+        title: "Falha no cadastro",
+        description: error.message,
+      });
+      return { error };
+    }
+
     try {
-      // Check if user already exists
       const existingUser = await replitDb.getUser(email);
       if (existingUser) {
         const error = { message: 'Este e-mail já está cadastrado.' };
@@ -62,10 +60,8 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user
       const userData = {
         email,
         password: hashedPassword,
@@ -94,6 +90,16 @@ export function AuthProvider({ children }) {
   }, [toast]);
 
   const signIn = useCallback(async (email, password) => {
+    if (!email || !password) {
+      const error = { message: 'Email e senha são obrigatórios.' };
+      toast({
+        variant: "destructive",
+        title: "Falha no login",
+        description: error.message,
+      });
+      return { error };
+    }
+
     try {
       const user = await replitDb.getUser(email);
 
@@ -107,7 +113,6 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (!isValidPassword) {
@@ -120,7 +125,6 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // Create session
       const sessionData = {
         email: user.email,
         userId: user.id,
@@ -150,6 +154,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const sendPasswordResetEmail = useCallback(async (email) => {
+    if (!email) {
+      const error = { message: 'E-mail é obrigatório.' };
+      toast({
+        variant: "destructive",
+        title: "Falha ao enviar e-mail",
+        description: error.message,
+      });
+      return { error };
+    }
+
     try {
       const user = await replitDb.getUser(email);
 
@@ -163,8 +177,6 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // In a real implementation, you would send an email here
-      // For now, we'll just set a recovery token in localStorage
       const recoveryToken = btoa(`${email}:${Date.now()}`);
       localStorage.setItem('password_recovery_token', recoveryToken);
       localStorage.setItem('password_recovery_email', email);
@@ -188,6 +200,16 @@ export function AuthProvider({ children }) {
   }, [toast]);
 
   const updateUserPassword = useCallback(async (newPassword) => {
+    if (!newPassword) {
+      const error = { message: 'Nova senha é obrigatória.' };
+      toast({
+        variant: "destructive",
+        title: "Falha ao atualizar senha",
+        description: error.message,
+      });
+      return { error };
+    }
+
     try {
       const recoveryEmail = localStorage.getItem('password_recovery_email');
 
@@ -225,6 +247,12 @@ export function AuthProvider({ children }) {
   }, [toast]);
 
   const changeUserPassword = useCallback(async (oldPassword, newPassword) => {
+    if (!oldPassword || !newPassword) {
+      const error = { message: "Senhas são obrigatórias." };
+      toast({ variant: "destructive", title: "Erro", description: error.message });
+      return { error };
+    }
+
     try {
       if (!user) {
         const error = { message: "Sessão inválida. Faça login novamente." };
@@ -232,7 +260,6 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // Verify old password
       const isValidPassword = await bcrypt.compare(oldPassword, user.password);
 
       if (!isValidPassword) {
@@ -241,7 +268,6 @@ export function AuthProvider({ children }) {
         return { error };
       }
 
-      // Update password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       const updatedUser = await replitDb.updateUser(user.email, { password: hashedPassword });
       setUser(updatedUser);
@@ -253,7 +279,7 @@ export function AuthProvider({ children }) {
 
       return { error: null };
     } catch (error) {
-      toast({ variant: "destructive", title: "Falha ao Salvar", description: error.message });
+      toast({ variant: "destructive", title: "Falha ao Salvar", description: error.message || 'Ocorreu um erro inesperado.' });
       return { error };
     }
   }, [user, toast]);

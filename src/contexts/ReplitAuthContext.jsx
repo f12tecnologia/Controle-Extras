@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import bcrypt from 'bcryptjs';
 import { replitDb } from '@/lib/replitDbClient';
 import { useToast } from '@/components/ui/use-toast';
-import bcrypt from 'bcryptjs';
 
 const AuthContext = createContext(undefined);
 
@@ -66,7 +65,7 @@ export const AuthProvider = ({ children }) => {
       };
 
       const newUser = await replitDb.createUser(userData);
-      
+
       toast({
         title: "Cadastro realizado!",
         description: "Usuário criado com sucesso.",
@@ -86,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   const signIn = useCallback(async (email, password) => {
     try {
       const user = await replitDb.getUser(email);
-      
+
       if (!user) {
         const error = { message: 'Email ou senha inválidos.' };
         toast({
@@ -99,7 +98,7 @@ export const AuthProvider = ({ children }) => {
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
-      
+
       if (!isValidPassword) {
         const error = { message: 'Email ou senha inválidos.' };
         toast({
@@ -142,7 +141,7 @@ export const AuthProvider = ({ children }) => {
   const sendPasswordResetEmail = useCallback(async (email) => {
     try {
       const user = await replitDb.getUser(email);
-      
+
       if (!user) {
         const error = { message: 'E-mail não encontrado.' };
         toast({
@@ -158,7 +157,7 @@ export const AuthProvider = ({ children }) => {
       const recoveryToken = btoa(`${email}:${Date.now()}`);
       localStorage.setItem('password_recovery_token', recoveryToken);
       localStorage.setItem('password_recovery_email', email);
-      
+
       setIsPasswordRecovery(true);
 
       toast({
@@ -180,7 +179,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserPassword = useCallback(async (newPassword) => {
     try {
       const recoveryEmail = localStorage.getItem('password_recovery_email');
-      
+
       if (!recoveryEmail) {
         const error = { message: 'Token de recuperação inválido.' };
         toast({
@@ -224,7 +223,7 @@ export const AuthProvider = ({ children }) => {
 
       // Verify old password
       const isValidPassword = await bcrypt.compare(oldPassword, user.password);
-      
+
       if (!isValidPassword) {
         const error = { message: "Senha atual incorreta." };
         toast({ variant: "destructive", title: "Falha na Autenticação", description: error.message });

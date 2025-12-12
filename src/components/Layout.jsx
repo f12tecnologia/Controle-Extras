@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/ReplitAuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut, Plus, BarChart3, Home, Users, Receipt, ListChecks, Building, CheckSquare, Settings, UserCog, UserCircle } from 'lucide-react';
@@ -65,8 +65,8 @@ const Layout = ({ children }) => {
     return [...baseItems, ...commonSettings];
   };
 
-  const userRole = user?.user_metadata?.role;
-  const userName = user?.user_metadata?.name || user?.email;
+  const userRole = user?.role || user?.user_metadata?.role;
+  const userName = user?.name || user?.user_metadata?.name || user?.email;
   const menuItems = getMenuItems(userRole);
 
   return (

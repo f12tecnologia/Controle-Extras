@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/ReplitAuthContext';
 import ReportsFilters from '@/components/Reports/ReportsFilters.jsx';
 import ReportsStats from '@/components/Reports/ReportsStats.jsx';
 import ReportsList from '@/components/Reports/ReportsList.jsx';

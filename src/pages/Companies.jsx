@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useAuth } from '@/contexts/ReplitAuthContext';
 
 const Companies = () => {
   const [companies, setCompanies] = useState([]);

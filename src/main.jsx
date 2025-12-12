@@ -3,13 +3,13 @@ import ReactDOM from 'react-dom/client';
 import App from '@/App';
 import '@/index.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider as SupabaseAuthProvider } from '@/contexts/SupabaseAuthContext.jsx';
+import { AuthProvider } from '@/contexts/ReplitAuthContext.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <SupabaseAuthProvider>
+    <AuthProvider>
       <App />
       <Toaster />
-    </SupabaseAuthProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

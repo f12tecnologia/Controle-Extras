@@ -8,8 +8,18 @@ const app = express();
 const db = new Database();
 const PORT = 3001;
 
-app.use(cors());
+// Configurar CORS para aceitar requisições do frontend
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
+
+// Middleware de log para debug
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // User endpoints
 app.get('/api/users/:email', async (req, res) => {

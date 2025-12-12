@@ -4,8 +4,12 @@ const getApiUrl = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3001/api';
   }
-  // Para Replit, use o mesmo host mas porta 3001
-  return `https://${window.location.hostname.replace(':5000', '')}:3001/api`;
+  // Para Replit, construir URL usando o hostname atual
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  // Remove qualquer porta do hostname
+  const baseHostname = hostname.split(':')[0];
+  return `${protocol}//${baseHostname}:3001/api`;
 };
 
 const API_URL = import.meta.env.VITE_API_URL || getApiUrl();

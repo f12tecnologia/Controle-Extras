@@ -1,0 +1,20 @@
+
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:319:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:229:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:205:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:319:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-5SEMSNIS.js?v=86476981:69:7
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-RZQXEYME.js?v=86476981:52:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-RZQXEYME.js?v=86476981:28:13
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-RZQXEYME.js?v=86476981:152:15
+    at Provider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:57:15)
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/@radix-ui_react-toast.js?v=86476981:325:7
+    at Presence (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-2YGRMGKY.js?v=86476981:24:11)
+    at https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/@radix-ui_react-toast.js?v=86476981:272:13
+    at _c3 (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/src/components/ui/toast.jsx:60:41)
+    at Provider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:57:15)
+    at Provider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-BGLX5WGV.js?v=86476981:57:15)
+    at CollectionProvider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/chunk-RZQXEYME.js?v=86476981:130:13)
+    at ToastProvider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/node_modules/.vite/deps/@radix-ui_react-toast.js?v=86476981:49:5)
+    at Toaster (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/src/components/ui/toaster.jsx:30:22)
+    at AuthProvider (https://13931214-af73-4f55-aee0-bc324510c0c1-00-ubl789qze23r.spock.replit.dev/src/contexts/ReplitAuthContext.jsx:23:32)

@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, []);
+  }, [toast]);
 
   const signIn = useCallback(async (email, password) => {
     try {
@@ -140,7 +140,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, []);
+  }, [toast]);
 
   const signOut = useCallback(async () => {
     localStorage.removeItem('replit_auth_session');
@@ -185,7 +185,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, []);
+  }, [toast]);
 
   const updateUserPassword = useCallback(async (newPassword) => {
     try {
@@ -222,7 +222,7 @@ export function AuthProvider({ children }) {
       });
       return { error };
     }
-  }, []);
+  }, [toast]);
 
   const changeUserPassword = useCallback(async (oldPassword, newPassword) => {
     try {
@@ -256,7 +256,7 @@ export function AuthProvider({ children }) {
       toast({ variant: "destructive", title: "Falha ao Salvar", description: error.message });
       return { error };
     }
-  }, [user]);
+  }, [user, toast]);
 
   const value = useMemo(() => ({
     user,

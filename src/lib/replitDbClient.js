@@ -1,8 +1,10 @@
 
 const getApiUrl = () => {
-  // Use URL relativa sempre - funciona em ambos desenvolvimento e produção
-  // Em desenvolvimento: localhost:5000 chama /api que vai para localhost:3001
-  // Em produção: dominio.com chama /api que vai para dominio.com:80 (Express rota para API)
+  // Em desenvolvimento (localhost): conectar diretamente ao backend na porta 3001
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+  // Em produção: usar URL relativa (Express serve tanto frontend quanto API)
   return '/api';
 };
 

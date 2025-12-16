@@ -90,13 +90,13 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
-**December 16, 2025** - Production Deployment Fixed:
-- Fixed API URL in production - now uses relative path `/api` instead of `hostname:3001`
+**December 16, 2025** - Production Deployment Fully Fixed:
+- Fixed API URL detection: uses `localhost:3001/api` in development, `/api` in production
 - Updated server.js to serve static files from `dist/` directory
 - Added SPA routing support for React Router
 - Changed deployment to `autoscale` with Express backend serving frontend + API
 - Admin user verified working: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
-- All CRUD operations tested and working with PostgreSQL
+- All CRUD operations tested and working with PostgreSQL in both development and production
 
 **December 16, 2025** - PostgreSQL Migration:
 - Migrated from Replit Database to external PostgreSQL (VPS hosted)

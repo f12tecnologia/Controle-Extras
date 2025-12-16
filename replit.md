@@ -80,10 +80,14 @@ The app connects to an external PostgreSQL database:
 - Pre-build: Runs `tools/generate-llms.js` to generate LLM context
 
 ## Deployment
-Configured for static site deployment on Replit:
-- Build output directory: `dist/`
-- Run `npm run build` to create production build
-- Static files are served from the `dist` directory
+Configured for autoscale deployment on Replit:
+- **Deployment Type:** Autoscale (runs only when receiving requests)
+- **Build Command:** `npm run build` (creates production build in `dist/` folder)
+- **Run Command:** `node server.js` (runs backend API + serves static files)
+- **Server Port:** 5000 (automatically exposed to internet)
+- **API Port:** 3001 (internal, accessed by server.js)
+- **Frontend:** Served as static files from the `dist/` directory by Express server
+- **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
 **December 16, 2025** - PostgreSQL Migration:

@@ -2,10 +2,15 @@ import express from 'express';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Configurar conexão com PostgreSQL
 const pool = new Pool({
@@ -30,6 +35,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Servir arquivos estáticos da build em produção
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Middleware de log
 app.use((req, res, next) => {
@@ -331,6 +339,16 @@ app.get('/api/extras-with-details', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Catch-all para servir index.html em rotas SPA não encontradas
+app.use((req, res, next) => {
+  // Se a rota começa com /api, retornar 404
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  // Caso contrário, servir o index.html para SPA routing
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {

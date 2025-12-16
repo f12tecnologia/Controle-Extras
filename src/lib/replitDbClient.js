@@ -13,9 +13,17 @@ const API_URL = import.meta.env.VITE_API_URL || getApiUrl();
 export const replitDb = {
   // User operations
   async getUser(email) {
-    const response = await fetch(`${API_URL}/users/${encodeURIComponent(email)}`);
-    if (!response.ok) return null;
-    return await response.json();
+    try {
+      const response = await fetch(`${API_URL}/users/${encodeURIComponent(email)}`);
+      if (!response.ok) {
+        console.error(`getUser failed: ${response.status} ${response.statusText}`);
+        return null;
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('getUser error:', error.message);
+      throw error;
+    }
   },
 
   async createUser(userData) {

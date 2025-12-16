@@ -32,7 +32,14 @@ export const replitDb = {
       const error = await response.json();
       throw new Error(error.error);
     }
-    return await response.json();
+    const result = await response.json();
+    // Converter campos snake_case para camelCase
+    if (result.authorized_company_ids) {
+      result.authorizedCompanyIds = typeof result.authorized_company_ids === 'string' 
+        ? JSON.parse(result.authorized_company_ids) 
+        : result.authorized_company_ids;
+    }
+    return result;
   },
 
   async getAllUsers() {

@@ -1,15 +1,9 @@
 
 const getApiUrl = () => {
-  // Se estiver em desenvolvimento local, use localhost
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api';
-  }
-  // Para Replit, construir URL usando o hostname atual
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname;
-  // Remove qualquer porta do hostname
-  const baseHostname = hostname.split(':')[0];
-  return `${protocol}//${baseHostname}:3001/api`;
+  // Use URL relativa sempre - funciona em ambos desenvolvimento e produção
+  // Em desenvolvimento: localhost:5000 chama /api que vai para localhost:3001
+  // Em produção: dominio.com chama /api que vai para dominio.com:80 (Express rota para API)
+  return '/api';
 };
 
 const API_URL = import.meta.env.VITE_API_URL || getApiUrl();

@@ -90,14 +90,20 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
+**December 16, 2025** - Production Deployment Fixed:
+- Fixed API URL in production - now uses relative path `/api` instead of `hostname:3001`
+- Updated server.js to serve static files from `dist/` directory
+- Added SPA routing support for React Router
+- Changed deployment to `autoscale` with Express backend serving frontend + API
+- Admin user verified working: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
+- All CRUD operations tested and working with PostgreSQL
+
 **December 16, 2025** - PostgreSQL Migration:
 - Migrated from Replit Database to external PostgreSQL (VPS hosted)
 - All tables created in PostgreSQL: users, companies, employees, extras
 - Data successfully migrated from Replit Database to PostgreSQL
 - Backend API updated to use pg library for direct database queries
-- No need for extractValue() wrapper with PostgreSQL
 - Connection string stored securely as EXTERNAL_DATABASE_URL secret
-- Admin user migrated: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
 
 **December 12, 2025** - Database Migration & Bug Fixes:
 - Migrated from Supabase to Replit Database with custom Express.js backend API

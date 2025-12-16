@@ -90,6 +90,15 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
+**December 16, 2025** - Fixed Development Environment (Final):
+- Fixed ReplitAuthContext.jsx to use hostname-based API URL detection (matching replitDbClient.js)
+- Development now correctly routes to http://localhost:3001/api (same PostgreSQL database)
+- Both development and production environments use identical EXTERNAL_DATABASE_URL secret
+- Removed import.meta.env.DEV dependency which was causing environment detection issues
+- Added logging to track API URL usage in authentication
+- Development login error "Falha de rede" now resolved
+- Both versions fully synchronized with same PostgreSQL backend
+
 **December 16, 2025** - Complete System Stabilization:
 - Fixed Dashboard.jsx to use replitDb API instead of Supabase (now uses PostgreSQL)
 - Fixed user role/name properties in Dashboard (user.role and user.name instead of metadata)

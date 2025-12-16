@@ -4,8 +4,17 @@ import bcrypt from 'bcryptjs';
 
 const AuthContext = createContext(undefined);
 
-// Determine API URL based on environment
-const API_URL = import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
+// Determine API URL based on environment (same logic as replitDbClient)
+const getApiUrl = () => {
+  // Em desenvolvimento (localhost): conectar diretamente ao backend na porta 3001
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+  // Em produção: usar URL relativa (Express serve tanto frontend quanto API)
+  return '/api';
+};
+
+const API_URL = getApiUrl();
 
 const processAuthError = (error) => {
   if (!error || !error.message) {
@@ -55,7 +64,10 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = useCallback(async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/users/${encodeURIComponent(email)}`);
+      const apiUrl = getApiUrl();
+      console.log(`Signing in with API URL: ${apiUrl}`);
+      
+      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(email)}`);
 
       if (!response.ok) {
         throw new Error('Email ou senha inválidos.');

@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Plus, DollarSign, Clock, Building, Users, UserPlus, CheckSquare, UserCog, Inbox, FileText } from 'lucide-react';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { Badge } from '@/components/ui/badge';
 
 const Dashboard = () => {
@@ -20,8 +20,8 @@ const Dashboard = () => {
   const [inboxItems, setInboxItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const userRole = user?.user_metadata?.role;
-  const userName = user?.user_metadata?.name || user?.email;
+  const userRole = user?.role;
+  const userName = user?.name || user?.email;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -36,31 +36,30 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
 
-      if (userRole === 'gestor' || userRole === 'admin') {
-        const { data: inboxData, error: inboxError } = await supabase.rpc('get_my_inbox');
-        if (inboxError) console.error("Error fetching inbox:", inboxError);
-        else setInboxItems(inboxData || []);
+      try {
+        if (userRole === 'gestor' || userRole === 'admin') {
+          const extrasData = await replitDb.getAllExtras();
+          const employeesData = await replitDb.getAllEmployees();
+          const companiesData = await replitDb.getAllCompanies();
 
-        const { count: extrasCount, error: extrasError } = await supabase.from('extras').select('*', { count: 'exact', head: true });
-        const { data: extrasData, error: extrasDataError } = await supabase.from('extras').select('valor');
-        const { count: employeesCount, error: employeesError } = await supabase.from('employees').select('*', { count: 'exact', head: true });
-        const { count: companiesCount, error: companiesError } = await supabase.from('companies').select('*', { count: 'exact', head: true });
-
-        if (!extrasError && !extrasDataError && !employeesError && !companiesError) {
           const totalValue = extrasData.reduce((sum, item) => sum + parseFloat(item.valor || 0), 0);
           setStats({
-            totalExtras: extrasCount,
+            totalExtras: extrasData.length,
             totalValue: totalValue,
-            employeesCount: employeesCount,
-            companiesCount: companiesCount,
+            employeesCount: employeesData.length,
+            companiesCount: companiesData.length,
           });
         }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
       }
       
       setLoading(false);
     };
 
-    fetchDashboardData();
+    if (userRole) {
+      fetchDashboardData();
+    }
   }, [userRole]);
 
   const renderLancadorDashboard = () => (

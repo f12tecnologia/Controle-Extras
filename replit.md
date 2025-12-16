@@ -90,13 +90,14 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
-**December 16, 2025** - Production Deployment Fully Fixed:
-- Fixed API URL detection: uses `localhost:3001/api` in development, `/api` in production
-- Updated server.js to serve static files from `dist/` directory
-- Added SPA routing support for React Router
-- Changed deployment to `autoscale` with Express backend serving frontend + API
-- Admin user verified working: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
-- All CRUD operations tested and working with PostgreSQL in both development and production
+**December 16, 2025** - Final Fixes & Dashboard Integration:
+- Fixed Dashboard.jsx to use replitDb API instead of Supabase (now uses PostgreSQL)
+- Fixed user role/name properties in Dashboard (user.role and user.name instead of metadata)
+- Fixed API URL routing: localhost:3001/api in dev, /api in production
+- Updated server.js to serve static files from dist/ and handle SPA routing
+- Changed deployment to autoscale with Express backend serving both frontend + API
+- All CRUD operations working with PostgreSQL in both environments
+- Admin user verified: leticia.silva.l1998@gmail.com / Bombom@8100
 
 **December 16, 2025** - PostgreSQL Migration:
 - Migrated from Replit Database to external PostgreSQL (VPS hosted)

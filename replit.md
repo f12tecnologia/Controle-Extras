@@ -67,11 +67,12 @@ The system supports three roles with different access levels:
 - Custom plugins for visual editing mode (development only)
 - Path alias: `@` maps to `./src`
 
-### Supabase Integration
-The app connects to a Supabase backend:
-- URL: `https://baiamtipehjpssonxzjh.supabase.co`
-- Authentication context provided via `SupabaseAuthContext`
-- Client initialized in `src/lib/customSupabaseClient.js`
+### PostgreSQL Integration
+The app connects to an external PostgreSQL database:
+- Connection URL: Stored in `EXTERNAL_DATABASE_URL` secret
+- Backend API queries database directly from Express.js server (port 3001)
+- Tables created automatically on server start: users, companies, employees, extras
+- Data properly persisted in VPS PostgreSQL instance
 
 ### Build Configuration
 - Build command: `npm run build`
@@ -85,13 +86,19 @@ Configured for static site deployment on Replit:
 - Static files are served from the `dist` directory
 
 ## Recent Changes
+**December 16, 2025** - PostgreSQL Migration:
+- Migrated from Replit Database to external PostgreSQL (VPS hosted)
+- All tables created in PostgreSQL: users, companies, employees, extras
+- Data successfully migrated from Replit Database to PostgreSQL
+- Backend API updated to use pg library for direct database queries
+- No need for extractValue() wrapper with PostgreSQL
+- Connection string stored securely as EXTERNAL_DATABASE_URL secret
+- Admin user migrated: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
+
 **December 12, 2025** - Database Migration & Bug Fixes:
 - Migrated from Supabase to Replit Database with custom Express.js backend API
-- Fixed `extractValue()` function to handle Replit Database's `{ok: true, value: {...}}` response format
-- Created admin user: `leticia.silva.l1998@gmail.com` / `Bombom@8100`
 - Fixed role verification in App.jsx to support `user.role` property
 - Backend server runs on port 3001, frontend on port 5000
-- All CRUD endpoints (users, companies, employees, extras) properly handle data extraction
 
 **December 4, 2025** - Initial Replit Setup:
 - Changed dev server port from 3000 to 5000
@@ -128,8 +135,29 @@ All dependencies are managed via npm and listed in `package.json`. Key dependenc
 - Framer Motion for animations
 - PDF/Excel export libraries
 
+## Migration Summary
+
+### From Supabase → Replit Database → PostgreSQL
+The application has undergone two major database migrations:
+
+1. **Initial**: Built with Supabase backend
+2. **December 12**: Migrated to Replit Database for simplicity
+3. **December 16**: Migrated to external PostgreSQL (VPS) for persistence and scalability
+
+### Why PostgreSQL?
+- Data persists across Replit restarts
+- Better performance for production workloads
+- More control over database configuration
+- Easier integration with external monitoring and backups
+
+### Login Credentials (Test Account)
+- **Email:** leticia.silva.l1998@gmail.com
+- **Password:** Bombom@8100
+- **Role:** admin (full system access)
+
 ## Notes
 - The application uses Portuguese language in the UI
 - Visual editor plugins are only enabled in development mode
-- The app requires Supabase credentials to function properly
+- PostgreSQL database is hosted on external VPS and accessed via EXTERNAL_DATABASE_URL secret
 - All routes (except auth pages) require authentication
+- All CRUD operations use native PostgreSQL queries for maximum performance

@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 const AuthContext = createContext(undefined);
 
 // Determine API URL based on environment
-const API_URL = import.meta.env.DEV ? 'http://localhost:3001' : '';
+const API_URL = import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
 
 const processAuthError = (error) => {
   if (!error || !error.message) {
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = useCallback(async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/api/users/${encodeURIComponent(email)}`);
+      const response = await fetch(`${API_URL}/users/${encodeURIComponent(email)}`);
 
       if (!response.ok) {
         throw new Error('Email ou senha inválidos.');
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = useCallback(async (email, password, options) => {
     try {
-      const response = await fetch(`${API_URL}/api/users`, {
+      const response = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // Verify old password
-      const response = await fetch(`${API_URL}/api/users/${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${API_URL}/users/${encodeURIComponent(user.email)}`);
       if (!response.ok) {
         throw new Error('Erro ao verificar senha atual');
       }
@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }) => {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      const updateResponse = await fetch(`${API_URL}/api/users/${encodeURIComponent(user.email)}`, {
+      const updateResponse = await fetch(`${API_URL}/users/${encodeURIComponent(user.email)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

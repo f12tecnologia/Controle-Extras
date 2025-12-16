@@ -8,6 +8,11 @@ const getApiUrl = () => {
   return '/api';
 };
 
+// Determine API URL based on environment
+function getApiUrl() {
+  return import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
+}
+
 const API_URL = import.meta.env.VITE_API_URL || getApiUrl();
 
 export const replitDb = {

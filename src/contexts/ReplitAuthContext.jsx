@@ -105,6 +105,18 @@ export function AuthProvider({ children }) {
 
       if (!user) {
         const error = { message: 'Email ou senha inválidos.' };
+        console.error('Login error: User not found for email:', email);
+        toast({
+          variant: "destructive",
+          title: "Falha no login",
+          description: error.message,
+        });
+        return { error };
+      }
+
+      if (!user.password) {
+        const error = { message: 'Erro ao processar senha. Contate o administrador.' };
+        console.error('Login error: User has no password:', email);
         toast({
           variant: "destructive",
           title: "Falha no login",
@@ -117,6 +129,7 @@ export function AuthProvider({ children }) {
 
       if (!isValidPassword) {
         const error = { message: 'Email ou senha inválidos.' };
+        console.error('Login error: Invalid password for email:', email);
         toast({
           variant: "destructive",
           title: "Falha no login",
@@ -137,6 +150,7 @@ export function AuthProvider({ children }) {
 
       return { error: null };
     } catch (error) {
+      console.error('Login error (catch):', error.message);
       toast({
         variant: "destructive",
         title: "Falha no login",

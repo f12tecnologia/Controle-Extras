@@ -1,225 +1,183 @@
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { buildReceiptPDF } from '@/helpers/pdf';
 
-async function fetchExtraForReceipt(extraId, usersList) {
+async function fetchExtraForReceipt(extraId) {
   console.log('📋 Buscando dados do extra:', extraId);
   
-  const { data: ex, error: exErr } = await supabase
-    .from('ex')
-    .select('id, setor, atr, eid, fid, approved_by, aprovado_em, cie, ciem')
-    .eq('id', extraId)
-    .maybeSingle();
-  
-  if (exErr) {
-    console.error('❌ Erro ao buscar extra:', exErr);
-    throw exErr;
-  }
-  
-  if (!ex) {
-    console.error('❌ Extra não encontrado');
-    throw new Error('Extra não encontrado');
-  }
-  
-  console.log('✅ Extra encontrado:', ex);
-
-  const [{ data: company }, { data: employee }, { data: items }] = await Promise.all([
-    supabase.from('companies').select('id, name').eq('id', ex.eid).maybeSingle(),
-    supabase.from('fu').select('id, nome, cpf, pix, banco_label').eq('id', ex.fid).maybeSingle(),
-    supabase.from('xi').select('d, ein, eout, v').eq('xid', extraId),
-  ]);
-
-  console.log('📊 Dados carregados - Empresa:', company, 'Funcionário:', employee, 'Items:', items);
-
-  if (!company || !employee || !items || items.length === 0) {
-    console.error('❌ Dados incompletos:', { company, employee, items });
-    throw new Error('Dados incompletos para recibo');
-  }
-
-  const total = (items || []).reduce((s, i) => s + Number(i.v || 0), 0);
-
-  const getName = (uid) => {
-    if (!uid || !usersList) return undefined;
-    const user = usersList.find(u => u.id === uid);
-    return user?.user_metadata?.name;
-  };
-
-  const approverName = getName(ex.approved_by);
-  const cienteName = getName(ex.cie);
-
-  return {
-    extra: {
-        ...ex,
-        vaga: ex.atr,
-        aprovado_em: ex.aprovado_em,
-        acknowledged_at: ex.ciem
-    },
-    company,
-    employee: { 
+  try {
+    const response = await fetch(`http://localhost:3001/api/extras/${extraId}`);
+    if (!response.ok) throw new Error('Extra não encontrado');
+    const extra = await response.json();
+    
+    if (!extra) throw new Error('Extra não encontrado');
+    console.log('✅ Extra encontrado:', extra);
+    
+    const [employee, company] = await Promise.all([
+      fetch(`http://localhost:3001/api/employees/${extra.employee_id}`).then(r => r.json()),
+      fetch(`http://localhost:3001/api/companies/${extra.company_id}`).then(r => r.json())
+    ]);
+    
+    if (!company || !employee) {
+      throw new Error('Dados incompletos para recibo');
+    }
+    
+    return {
+      extra: {
+        ...extra,
+        vaga: extra.vaga,
+        aprovado_em: extra.created_at
+      },
+      company: { id: company.id, name: company.name },
+      employee: { 
         id: employee.id,
-        name: employee.nome, 
+        name: employee.name, 
         cpf: employee.cpf, 
-        chavePix: employee.pix, 
-        banco: employee.banco_label 
-    },
-    items: items.map(i => ({
-      d: i.d,
-      ein: i.ein ?? undefined,
-      eout: i.eout ?? undefined,
-      v: Number(i.v || 0),
-    })),
-    total,
-    approver: approverName ? { name: approverName } : undefined,
-    acknowledger: cienteName ? { name: cienteName } : undefined,
-  };
+        chavePix: employee.pix_key || '', 
+        banco: employee.banco || '' 
+      },
+      items: [{
+        d: extra.data_evento,
+        ein: extra.hora_entrada,
+        eout: extra.hora_saida,
+        v: parseFloat(extra.valor || 0),
+      }],
+      total: parseFloat(extra.valor || 0),
+      approver: { name: 'Gestor' },
+      acknowledger: undefined,
+    };
+  } catch (error) {
+    console.error('❌ Erro ao buscar extra:', error);
+    throw error;
+  }
 }
 
 async function createReceipt(extraId, usersList) {
   console.log('📝 Criando recibo para extra:', extraId);
   
-  const data = await fetchExtraForReceipt(extraId, usersList);
-  console.log('✅ Dados do recibo preparados');
-  
-  const blob = buildReceiptPDF(data);
-  console.log('✅ PDF gerado, tamanho:', blob.size, 'bytes');
-
-  const filePath = `recibos/${extraId}.pdf`;
-  console.log('📤 Fazendo upload para:', filePath);
-  
-  const { error: upErr } = await supabase.storage.from('recibos').upload(filePath, blob, {
-    upsert: true,
-    contentType: 'application/pdf',
-  });
-  
-  if (upErr) {
-    console.error('❌ Erro no upload:', upErr);
-    throw upErr;
+  try {
+    const data = await fetchExtraForReceipt(extraId);
+    console.log('✅ Dados do recibo preparados');
+    
+    const blob = buildReceiptPDF(data);
+    console.log('✅ PDF gerado, tamanho:', blob.size, 'bytes');
+    
+    // Converter blob para data URL
+    const reader = new FileReader();
+    const pdfUrl = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    
+    console.log('✅ PDF convertido para data URL');
+    const total = data.total;
+    
+    // Salvar no backend
+    const response = await fetch('http://localhost:3001/api/recibos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ extra_id: extraId, pdf_url: pdfUrl, total })
+    });
+    
+    if (!response.ok) throw new Error('Erro ao salvar recibo');
+    console.log('✅ Recibo salvo no banco de dados');
+    
+    return pdfUrl;
+  } catch (error) {
+    console.error('❌ Erro ao criar recibo:', error);
+    throw error;
   }
-  
-  console.log('✅ Upload concluído');
-
-  const { data: pub } = supabase.storage.from('recibos').getPublicUrl(filePath);
-  const pdfUrl = pub?.publicUrl;
-  
-  console.log('🔗 URL pública gerada:', pdfUrl);
-
-  const total = data.total;
-
-  const { error: insErr } = await supabase
-    .from('recibos')
-    .upsert({ extra_id: extraId, pdf_url: pdfUrl, total }, { onConflict: 'extra_id' });
-  
-  if (insErr) {
-    console.error('❌ Erro ao salvar registro do recibo:', insErr);
-    throw insErr;
-  }
-  
-  console.log('✅ Registro do recibo salvo no banco de dados');
-
-  return pdfUrl;
 }
 
 export async function onCiente(extraId) {
   console.log('ℹ️ Marcando extra como ciente:', extraId);
-  const { error } = await supabase.rpc('ex_mark_ciente', { p_extra_id: extraId });
-  if (error) {
-    console.error('❌ Erro ao marcar como ciente:', error);
+  try {
+    const response = await fetch(`http://localhost:3001/api/extras/${extraId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ciente' })
+    });
+    if (!response.ok) throw new Error('Erro ao marcar como ciente');
+    console.log('✅ Extra marcado como ciente');
+  } catch (error) {
+    console.error('❌ Erro:', error);
     throw error;
   }
-  console.log('✅ Extra marcado como ciente');
 }
 
 export async function onAprovar(extraId, usersList) {
   console.log('✅ Aprovando extra:', extraId);
-  const { error } = await supabase.rpc('ex_approve', { p_extra_id: extraId });
-  if (error) {
+  try {
+    const response = await fetch(`http://localhost:3001/api/extras/${extraId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'aprovado' })
+    });
+    if (!response.ok) throw new Error('Erro ao aprovar');
+    console.log('✅ Extra aprovado, gerando recibo...');
+    
+    await createReceipt(extraId, usersList);
+    console.log('✅ Processo de aprovação concluído');
+  } catch (error) {
     console.error('❌ Erro ao aprovar:', error);
     throw error;
   }
-  console.log('✅ Extra aprovado, gerando recibo...');
-
-  await createReceipt(extraId, usersList);
-  console.log('✅ Processo de aprovação concluído');
 }
 
 export async function onRejeitar(extraId) {
   console.log('❌ Rejeitando extra:', extraId);
-  const { error } = await supabase.rpc('ex_reject', { p_extra_id: extraId });
-  if (error) {
-    console.error('❌ Erro ao rejeitar:', error);
+  try {
+    const response = await fetch(`http://localhost:3001/api/extras/${extraId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejeitado' })
+    });
+    if (!response.ok) throw new Error('Erro ao rejeitar');
+    console.log('✅ Extra rejeitado');
+  } catch (error) {
+    console.error('❌ Erro:', error);
     throw error;
   }
-  console.log('✅ Extra rejeitado');
 }
 
 export async function onDownload(extraId) {
-    console.log('📥 Buscando recibo para download:', extraId);
+  console.log('📥 Buscando recibo para download:', extraId);
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/recibos/${extraId}`);
     
-    const { data, error } = await supabase
-        .from('recibos')
-        .select('pdf_url')
-        .eq('extra_id', extraId)
-        .maybeSingle();
-
-    if (error) {
-        console.error('❌ Erro ao buscar recibo:', error);
-        throw error;
+    if (!response.ok || response.status === 404) {
+      console.log('⚠️ Recibo não encontrado no banco de dados');
+      return null;
     }
+    
+    const data = await response.json();
     
     if (data && data.pdf_url) {
-        console.log('✅ Recibo encontrado:', data.pdf_url);
-        return data.pdf_url;
+      console.log('✅ Recibo encontrado');
+      return data.pdf_url;
     }
     
-    console.log('⚠️ Recibo não encontrado no banco de dados');
+    console.log('⚠️ Recibo não encontrado');
     return null;
+  } catch (error) {
+    console.error('❌ Erro ao buscar recibo:', error);
+    throw error;
+  }
 }
 
 export async function onDeleteReceipt(extraId) {
-    console.log('🗑️ Excluindo recibo:', extraId);
+  console.log('🗑️ Excluindo recibo:', extraId);
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/recibos/${extraId}`, {
+      method: 'DELETE'
+    });
     
-    // 1. Get the PDF URL to delete the file from storage
-    const { data: receiptData, error: fetchError } = await supabase
-        .from('recibos')
-        .select('pdf_url')
-        .eq('extra_id', extraId)
-        .maybeSingle();
-
-    if (fetchError) {
-        console.error('❌ Erro ao buscar recibo para exclusão:', fetchError);
-        throw fetchError;
-    }
-
-    if (receiptData && receiptData.pdf_url) {
-        console.log('📄 URL do recibo:', receiptData.pdf_url);
-        
-        // Extract file path from URL
-        const urlParts = receiptData.pdf_url.split('/');
-        const filePathIndex = urlParts.indexOf('recibos');
-        
-        if (filePathIndex !== -1) {
-            const filePath = urlParts.slice(filePathIndex).join('/');
-            console.log('🗂️ Caminho do arquivo:', filePath);
-
-            // 2. Delete the file from Supabase Storage
-            const { error: storageError } = await supabase.storage.from('recibos').remove([filePath]);
-            if (storageError) {
-                console.error('⚠️ Erro ao excluir arquivo do storage:', storageError.message);
-            } else {
-                console.log('✅ Arquivo excluído do storage');
-            }
-        }
-    }
-
-    // 3. Delete the record from the 'recibos' table
-    const { error: deleteError } = await supabase
-        .from('recibos')
-        .delete()
-        .eq('extra_id', extraId);
-
-    if (deleteError) {
-        console.error('❌ Erro ao excluir registro do recibo:', deleteError);
-        throw deleteError;
-    }
-    
-    console.log('✅ Registro do recibo excluído do banco de dados');
+    if (!response.ok) throw new Error('Erro ao excluir recibo');
+    console.log('✅ Recibo excluído');
+  } catch (error) {
+    console.error('❌ Erro ao excluir:', error);
+    throw error;
+  }
 }

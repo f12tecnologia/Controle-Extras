@@ -90,6 +90,15 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
+**December 16, 2025** - Fixed Receipt Download System:
+- Migrated receiptActions.js from Supabase to PostgreSQL
+- Added receipt endpoints to server.js (/api/recibos)
+- Automatic table creation on server startup for recibos
+- PDF generation and storage working with PostgreSQL
+- Status updates for extras (approved, rejected, acknowledged)
+- Receipts now download without "not found" errors after approval
+- Both development and production fully aligned
+
 **December 16, 2025** - Fixed Development Environment (Final):
 - Fixed ReplitAuthContext.jsx to use hostname-based API URL detection (matching replitDbClient.js)
 - Development now correctly routes to http://localhost:3001/api (same PostgreSQL database)

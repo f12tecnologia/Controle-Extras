@@ -20,12 +20,29 @@ const pool = new Pool({
   }
 });
 
-// Testar conexão
-pool.query('SELECT NOW()', (err, res) => {
+// Testar conexão e criar tabelas necessárias
+pool.query('SELECT NOW()', async (err, res) => {
   if (err) {
     console.error('❌ Erro ao conectar ao PostgreSQL:', err);
   } else {
     console.log('✅ Conectado ao PostgreSQL:', res.rows[0].now);
+    
+    // Criar tabela de recibos se não existir
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS recibos (
+          id TEXT PRIMARY KEY,
+          extra_id TEXT NOT NULL UNIQUE,
+          pdf_url TEXT,
+          total NUMERIC(10, 2),
+          created_at TIMESTAMP DEFAULT NOW(),
+          FOREIGN KEY (extra_id) REFERENCES extras(id) ON DELETE CASCADE
+        );
+      `);
+      console.log('✅ Tabela recibos verificada/criada');
+    } catch (err) {
+      console.log('ℹ️ Tabela recibos já existe');
+    }
   }
 });
 
@@ -336,6 +353,57 @@ app.get('/api/extras-with-details', async (req, res) => {
       ORDER BY e.created_at DESC
     `);
     res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Receipt endpoints
+app.get('/api/recibos/:extraId', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM recibos WHERE extra_id = $1', [req.params.extraId]);
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/recibos', async (req, res) => {
+  try {
+    const { extra_id, pdf_url, total } = req.body;
+    const id = `receipt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const result = await pool.query(
+      `INSERT INTO recibos (id, extra_id, pdf_url, total, created_at) 
+       VALUES ($1, $2, $3, $4, $5) 
+       ON CONFLICT (extra_id) DO UPDATE SET pdf_url = $3, total = $4
+       RETURNING *`,
+      [id, extra_id, pdf_url, total, new Date().toISOString()]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/extras/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const result = await pool.query(
+      'UPDATE extras SET status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/recibos/:extraId', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM recibos WHERE extra_id = $1', [req.params.extraId]);
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

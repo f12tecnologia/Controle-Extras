@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/ReplitAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,23 +19,19 @@ const Receipts = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [usersList, setUsersList] = useState([]);
     const [downloadingIds, setDownloadingIds] = useState(new Set());
+    const [approvingIds, setApprovingIds] = useState(new Set());
 
     const loadData = useCallback(async () => {
         setLoadingExtras(true);
-        const { data, error } = await supabase.from('extras').select('*, employees(*), companies(name)');
-        
-        if (error) {
-            toast({ title: "Erro ao carregar extras", description: error.message, variant: "destructive" });
-        } else {
-            setExtras(data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
-        }
-
         try {
-            const { data: usersData, error: usersError } = await supabase.functions.invoke('list-users');
-            if (usersError) throw usersError;
+            const data = await replitDb.getExtrasWithDetails();
+            setExtras(data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+            
+            const usersData = await replitDb.getAllUsers();
             setUsersList(usersData || []);
-        } catch (e) {
-            toast({ title: "Erro ao buscar usuários", description: e.message, variant: "destructive" });
+        } catch (error) {
+            console.error('Error loading data:', error);
+            toast({ title: "Erro ao carregar extras", description: error.message, variant: "destructive" });
         }
         
         setLoadingExtras(false);
@@ -46,6 +42,10 @@ const Receipts = () => {
     }, [loadData]);
 
     const handleAction = async (extraId, actionType) => {
+        if (actionType === 'aprovado') {
+            setApprovingIds(prev => new Set(prev).add(extraId));
+        }
+        
         try {
             switch(actionType) {
                 case 'aprovado': 
@@ -60,9 +60,18 @@ const Receipts = () => {
                 default: return;
             }
             toast({ title: "Sucesso!", description: `O extra foi marcado como ${actionType}.` });
-            loadData();
+            await loadData();
         } catch (error) {
+            console.error(`Error during ${actionType}:`, error);
             toast({ title: `Erro ao ${actionType}`, description: error.message, variant: "destructive" });
+        } finally {
+            if (actionType === 'aprovado') {
+                setApprovingIds(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(extraId);
+                    return newSet;
+                });
+            }
         }
     };
     
@@ -75,13 +84,13 @@ const Receipts = () => {
                 await handleAction(extraId, actionType);
                 successCount++;
             } catch (error) {
-                // Error toast is shown in handleAction
+                console.error(`Bulk action error for ${extraId}:`, error);
             }
         }
         
         if (successCount > 0) {
             toast({ title: "Ação em massa concluída!", description: `${successCount} de ${extraIds.length} extra(s) foram atualizados.` });
-            loadData();
+            await loadData();
         }
     };
 
@@ -99,9 +108,9 @@ const Receipts = () => {
         const requester = usersList.find(u => u.id === firstExtra.user_id);
         
         const aggregatedData = {
-            employee: firstExtra.employees,
-            company: firstExtra.companies,
-            requester: requester,
+            employee: firstExtra.employees || { name: firstExtra.employee_name || 'N/A' },
+            company: firstExtra.companies || { name: firstExtra.company_name || 'N/A' },
+            requester: requester ? { user_metadata: { name: requester.name } } : { user_metadata: { name: 'N/A' } },
             details: employeeExtras.map(e => ({
                 id: e.id,
                 data_evento: e.data_evento,
@@ -127,34 +136,19 @@ const Receipts = () => {
             const pdfUrl = await onDownload(extraId);
             
             if (pdfUrl) {
-                console.log('✅ URL do PDF encontrada:', pdfUrl);
+                console.log('✅ URL do PDF encontrada, iniciando download...');
                 
-                // Tentar abrir em nova aba
-                const newWindow = window.open(pdfUrl, '_blank');
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `recibo-${extraId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 
-                if (newWindow) {
-                    console.log('✅ PDF aberto em nova aba');
-                    toast({ 
-                        title: "Recibo aberto!", 
-                        description: "O recibo foi aberto em uma nova aba." 
-                    });
-                } else {
-                    // Se bloqueado por popup blocker, tentar download direto
-                    console.log('⚠️ Popup bloqueado, tentando download direto...');
-                    
-                    const link = document.createElement('a');
-                    link.href = pdfUrl;
-                    link.download = `recibo-${extraId}.pdf`;
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    toast({ 
-                        title: "Download iniciado!", 
-                        description: "O recibo está sendo baixado." 
-                    });
-                }
+                toast({ 
+                    title: "Download iniciado!", 
+                    description: "O recibo está sendo baixado." 
+                });
             } else {
                 console.log('❌ Recibo não encontrado no banco de dados');
                 toast({ 
@@ -195,19 +189,19 @@ const Receipts = () => {
         const lowerCaseStatus = (status || 'pendente').toLowerCase();
         switch (lowerCaseStatus) {
             case 'aprovado':
-                return <Badge className="bg-green-500/80 text-white">Aprovado</Badge>;
+                return <Badge className="bg-blue-500/80 text-white">Aprovado</Badge>;
             case 'rejeitado':
                 return <Badge variant="destructive">Rejeitado</Badge>;
             case 'ciente':
-                return <Badge className="bg-blue-500/80 text-white">Ciente</Badge>;
+                return <Badge className="bg-purple-500/80 text-white">Ciente</Badge>;
             case 'pendente':
             default:
                 return <Badge className="bg-amber-500/80 text-white">Pendente</Badge>;
         }
     };
     
-    const isGestor = user?.user_metadata?.role === 'gestor';
-    const isAdmin = user?.user_metadata?.role === 'admin';
+    const isGestor = user?.role === 'gestor';
+    const isAdmin = user?.role === 'admin';
 
     const filteredExtras = extras;
 
@@ -239,10 +233,19 @@ const Receipts = () => {
                             <Card className="glass-effect border-white/20">
                                 <CardHeader className="flex flex-row justify-between items-start">
                                     <div>
-                                        <CardTitle className="text-white flex items-center gap-2"><User size={16} />{extra.employees?.name || 'Funcionário não encontrado'}</CardTitle>
+                                        <CardTitle className="text-white flex items-center gap-2">
+                                            <User size={16} />
+                                            {extra.employees?.name || extra.employee_name || 'Funcionário não encontrado'}
+                                        </CardTitle>
                                         <CardDescription className="text-gray-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                            <span className="flex items-center gap-1"><Calendar size={14}/>Criado em: {new Date(extra.created_at).toLocaleDateString('pt-BR')}</span>
-                                            <span className="flex items-center gap-1"><CircleDollarSign size={14}/>Total: R$ {(extra.valor || 0).toFixed(2)}</span>
+                                            <span className="flex items-center gap-1">
+                                                <Calendar size={14}/>
+                                                Criado em: {new Date(extra.created_at).toLocaleDateString('pt-BR')}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <CircleDollarSign size={14}/>
+                                                Total: R$ {parseFloat(extra.valor || 0).toFixed(2)}
+                                            </span>
                                         </CardDescription>
                                     </div>
                                     {getStatusBadge(extra.status)}
@@ -255,11 +258,26 @@ const Receipts = () => {
                                         
                                         {(isGestor || isAdmin) && (extra.status || 'pendente').toLowerCase() === 'pendente' && (
                                             <>
-                                                <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => handleAction(extra.id, 'ciente')}>
+                                                <Button size="sm" className="bg-purple-500 hover:bg-purple-600 text-white" onClick={() => handleAction(extra.id, 'ciente')}>
                                                     <Info className="w-4 h-4 mr-2" /> Ciente
                                                 </Button>
-                                                <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white" onClick={() => handleAction(extra.id, 'aprovado')}>
-                                                    <Check className="w-4 h-4 mr-2" /> Aprovar
+                                                <Button 
+                                                    size="sm" 
+                                                    className="bg-green-500 hover:bg-green-600 text-white" 
+                                                    onClick={() => handleAction(extra.id, 'aprovado')}
+                                                    disabled={approvingIds.has(extra.id)}
+                                                >
+                                                    {approvingIds.has(extra.id) ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                            Aprovando...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Check className="w-4 h-4 mr-2" />
+                                                            Aprovar
+                                                        </>
+                                                    )}
                                                 </Button>
                                                 <Button variant="destructive" size="sm" onClick={() => handleAction(extra.id, 'rejeitado')}>
                                                     <X className="w-4 h-4 mr-2" /> Rejeitar

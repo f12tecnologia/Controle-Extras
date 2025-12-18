@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Info } from 'lucide-react';
+import { X, Check, Info, Loader2 } from 'lucide-react';
 
 const ApprovalDetailDialog = ({ isOpen, onClose, data, onBulkUpdate }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentAction, setCurrentAction] = useState(null);
 
   if (!data || !data.employee) {
     return null;
@@ -17,9 +18,14 @@ const ApprovalDetailDialog = ({ isOpen, onClose, data, onBulkUpdate }) => {
 
   const handleAction = async (status) => {
     setIsSubmitting(true);
-    await onBulkUpdate(extraIds, status);
-    setIsSubmitting(false);
-    onClose();
+    setCurrentAction(status);
+    try {
+      await onBulkUpdate(extraIds, status);
+    } finally {
+      setIsSubmitting(false);
+      setCurrentAction(null);
+      onClose();
+    }
   };
 
   const formatDate = (dateString) => {
@@ -102,14 +108,26 @@ const ApprovalDetailDialog = ({ isOpen, onClose, data, onBulkUpdate }) => {
             <p className="text-2xl font-bold gradient-text">{formatCurrency(totalValue)}</p>
           </div>
           <div className="flex space-x-2">
-            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => handleAction('ciente')} disabled={isSubmitting}>
-              <Info className="w-4 h-4 mr-2" /> {isSubmitting ? 'Processando...' : 'Ciente'}
+            <Button size="sm" className="bg-purple-500 hover:bg-purple-600 text-white" onClick={() => handleAction('ciente')} disabled={isSubmitting}>
+              {currentAction === 'ciente' ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...</>
+              ) : (
+                <><Info className="w-4 h-4 mr-2" /> Ciente</>
+              )}
             </Button>
             <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white" onClick={() => handleAction('aprovado')} disabled={isSubmitting}>
-              <Check className="w-4 h-4 mr-2" /> {isSubmitting ? 'Processando...' : 'Aprovar'}
+              {currentAction === 'aprovado' ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Aprovando...</>
+              ) : (
+                <><Check className="w-4 h-4 mr-2" /> Aprovar</>
+              )}
             </Button>
             <Button variant="destructive" size="sm" onClick={() => handleAction('rejeitado')} disabled={isSubmitting}>
-              <X className="w-4 h-4 mr-2" /> {isSubmitting ? 'Processando...' : 'Rejeitar'}
+              {currentAction === 'rejeitado' ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...</>
+              ) : (
+                <><X className="w-4 h-4 mr-2" /> Rejeitar</>
+              )}
             </Button>
           </div>
         </DialogFooter>

@@ -90,6 +90,14 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
+**December 18, 2025** - Fixed Receipt Generation on Approval:
+- Fixed receiptActions.js to use dynamic API URL based on environment
+- Development uses http://localhost:3001/api, production uses /api
+- Approval button now correctly generates PDF and saves to PostgreSQL
+- Download button retrieves saved PDF from database
+- Enhanced logging for debugging receipt generation
+- All receipt actions (approve, reject, acknowledge) working correctly
+
 **December 16, 2025** - Fixed Receipt Download System:
 - Migrated receiptActions.js from Supabase to PostgreSQL
 - Added receipt endpoints to server.js (/api/recibos)

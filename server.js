@@ -66,7 +66,10 @@ app.use((req, res, next) => {
 app.get('/api/users/:email', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [req.params.email]);
-    res.json(result.rows[0] || null);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -4,17 +4,7 @@ import bcrypt from 'bcryptjs';
 
 const AuthContext = createContext(undefined);
 
-// Determine API URL based on environment (same logic as replitDbClient)
-const getApiUrl = () => {
-  // Em desenvolvimento (localhost): conectar diretamente ao backend na porta 3001
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api';
-  }
-  // Em produção: usar URL relativa (Express serve tanto frontend quanto API)
-  return '/api';
-};
-
-const API_URL = getApiUrl();
+const API_URL = '/api';
 
 const processAuthError = (error) => {
   if (!error || !error.message) {
@@ -64,22 +54,25 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = useCallback(async (email, password) => {
     try {
-      const apiUrl = getApiUrl();
-      console.log(`Signing in with API URL: ${apiUrl}`);
-      
-      const response = await fetch(`${apiUrl}/users/${encodeURIComponent(email)}`);
+      console.log('Attempting login for:', email);
+      const response = await fetch(`${API_URL}/users/${encodeURIComponent(email)}`);
+      console.log('Response status:', response.status);
 
       if (!response.ok) {
+        console.log('Response not OK');
         throw new Error('Email ou senha inválidos.');
       }
 
       const userData = await response.json();
+      console.log('User data received:', userData ? 'yes' : 'no');
 
       if (!userData) {
         throw new Error('Email ou senha inválidos.');
       }
 
+      console.log('Comparing passwords...');
       const isPasswordValid = await bcrypt.compare(password, userData.password);
+      console.log('Password valid:', isPasswordValid);
 
       if (!isPasswordValid) {
         throw new Error('Email ou senha inválidos.');
@@ -101,7 +94,8 @@ export const AuthProvider = ({ children }) => {
 
       return { error: null };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error?.message || error);
+      console.error('Error stack:', error?.stack);
       toast({
         variant: "destructive",
         title: "Falha no login",

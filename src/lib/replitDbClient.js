@@ -1,10 +1,4 @@
-
-// Determine API URL based on environment
-function getApiUrl() {
-  return import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
-}
-
-const API_URL = getApiUrl();
+const API_URL = '/api';
 
 export const replitDb = {
   // User operations

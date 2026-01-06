@@ -167,8 +167,16 @@ export async function onDownload(extraId) {
     const response = await fetch(`${API_URL}/recibos/${extraId}`);
     
     if (!response.ok || response.status === 404) {
-      console.log('⚠️ Recibo não encontrado no banco de dados');
-      return null;
+      console.log('⚠️ Recibo não encontrado, tentando gerar...');
+      
+      try {
+        const pdfUrl = await createReceipt(extraId, []);
+        console.log('✅ Recibo gerado com sucesso');
+        return pdfUrl;
+      } catch (genError) {
+        console.error('❌ Erro ao gerar recibo:', genError);
+        return null;
+      }
     }
     
     const data = await response.json();
@@ -178,8 +186,15 @@ export async function onDownload(extraId) {
       return data.pdf_url;
     }
     
-    console.log('⚠️ Recibo não encontrado');
-    return null;
+    console.log('⚠️ Recibo não encontrado, tentando gerar...');
+    try {
+      const pdfUrl = await createReceipt(extraId, []);
+      console.log('✅ Recibo gerado com sucesso');
+      return pdfUrl;
+    } catch (genError) {
+      console.error('❌ Erro ao gerar recibo:', genError);
+      return null;
+    }
   } catch (error) {
     console.error('❌ Erro ao buscar recibo:', error);
     throw error;

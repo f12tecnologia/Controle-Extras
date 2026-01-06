@@ -43,6 +43,15 @@ pool.query('SELECT NOW()', async (err, res) => {
     } catch (err) {
       console.log('ℹ️ Tabela recibos já existe');
     }
+    
+    // Adicionar colunas pix_key e banco na tabela employees se não existirem
+    try {
+      await pool.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS pix_key TEXT DEFAULT ''`);
+      await pool.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS banco TEXT DEFAULT ''`);
+      console.log('✅ Colunas pix_key e banco verificadas/criadas');
+    } catch (err) {
+      console.log('ℹ️ Colunas pix_key e banco já existem');
+    }
   }
 });
 

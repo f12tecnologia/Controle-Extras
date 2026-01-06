@@ -1,14 +1,14 @@
 # Sistema de Cadastro de Extras
 
 ## Overview
-This is a comprehensive expense management system (Sistema de Cadastro de Extras) built with React, Vite, and Supabase. The application provides role-based access control for managing employees, companies, receipts, and reports.
+This is a comprehensive expense management system (Sistema de Cadastro de Extras) built with React, Vite, and PostgreSQL. The application provides role-based access control for managing employees, companies, receipts, and reports.
 
 **Purpose:** Manage extras/expenses with multi-level authorization and reporting capabilities.
 
 **Tech Stack:**
 - Frontend: React 18.2 + Vite 4.4
 - UI Components: Radix UI + Tailwind CSS
-- Backend/Database: Supabase
+- Backend: Express.js + PostgreSQL (VPS hosted)
 - Routing: React Router v6
 - Forms & Data: HTML2Canvas, jsPDF, XLSX for reports/exports
 
@@ -30,7 +30,7 @@ This is a comprehensive expense management system (Sistema de Cadastro de Extras
 │   │   └── ui/            # Reusable UI components (Radix UI based)
 │   ├── contexts/          # React contexts (Auth)
 │   ├── helpers/           # Utility functions (PDF, receipt actions)
-│   ├── lib/               # Supabase client and utilities
+│   ├── lib/               # replitDbClient API utilities
 │   ├── pages/             # Route pages
 │   └── App.jsx            # Main application component
 ├── plugins/               # Vite plugins for visual editor
@@ -45,9 +45,9 @@ The system supports three roles with different access levels:
 - **admin**: Full system access including user management
 
 ### Key Features
-1. Authentication with Supabase (login, signup, password reset)
+1. Custom authentication with PostgreSQL (login, password hashing with bcrypt)
 2. Role-based route protection
-3. Employee management
+3. Employee management (with PIX key and bank info)
 4. Company management
 5. Receipt/expense tracking
 6. Reporting with filters and statistics
@@ -90,6 +90,13 @@ Configured for autoscale deployment on Replit:
 - **Backend API:** All endpoints available at `/api/*` routes
 
 ## Recent Changes
+**January 6, 2026** - Complete Supabase Removal:
+- Removed all Supabase dependencies and files (customSupabaseClient.js, SupabaseAuthContext.jsx)
+- Migrated all pages (Companies, Employees, Extras, Users, Reports, AuthorizedCompanies) to use replitDbClient
+- Updated server.js with pix_key and banco field support for employees
+- Application now 100% PostgreSQL-backed with no Supabase references
+- Uninstalled @supabase/supabase-js package
+
 **December 18, 2025** - Fixed Receipt Generation on Approval:
 - Fixed receiptActions.js to use dynamic API URL based on environment
 - Development uses http://localhost:3001/api, production uses /api
@@ -168,7 +175,8 @@ npm run preview
 ## Dependencies
 All dependencies are managed via npm and listed in `package.json`. Key dependencies include:
 - React ecosystem (react, react-dom, react-router-dom)
-- Supabase client
+- Express.js + pg (PostgreSQL client)
+- bcryptjs for password hashing
 - Radix UI components
 - Tailwind CSS for styling
 - Framer Motion for animations

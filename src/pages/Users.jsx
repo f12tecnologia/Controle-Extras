@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 
 const UsersPage = () => {
   const { toast } = useToast();
@@ -29,8 +29,7 @@ const UsersPage = () => {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: usersData, error } = await supabase.functions.invoke('list-users');
-      if (error) throw error;
+      const usersData = await replitDb.getAllUsers();
       setUsers(usersData);
     } catch (error) {
       toast({
@@ -58,13 +57,9 @@ const UsersPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (email) => {
     try {
-      const { error } = await supabase.functions.invoke('delete-user', {
-        body: { userId: id },
-      });
-      if (error) throw error;
-      
+      await replitDb.deleteUser(email);
       loadUsers();
       toast({
         title: "Usuário excluído",
@@ -159,11 +154,9 @@ const UsersPage = () => {
                   <div className="flex justify-between items-center">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-2">
-                        <h3 className="font-semibold text-white text-lg">{user.user_metadata?.name || user.email}</h3>
-                        {getRoleBadge(user.user_metadata?.role)}
-                        <Badge variant={!user.banned_until ? "success" : "destructive"}>
-                          {!user.banned_until ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        <h3 className="font-semibold text-white text-lg">{user.name || user.email}</h3>
+                        {getRoleBadge(user.role)}
+                        <Badge variant="success">Ativo</Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-300">
                         <div>
@@ -172,7 +165,7 @@ const UsersPage = () => {
                         </div>
                         <div>
                           <span className="text-gray-400">Setor: </span>
-                          <span className="text-white">{user.user_metadata?.setor || 'N/A'}</span>
+                          <span className="text-white">{user.setor || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
@@ -182,7 +175,7 @@ const UsersPage = () => {
                         variant="outline"
                         onClick={() => handleEdit(user)}
                         className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                        disabled={user.user_metadata?.role === 'admin'}
+                        disabled={user.role === 'admin'}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -205,7 +198,7 @@ const UsersPage = () => {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel className="text-white border-white/20 hover:bg-white/10">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-red-600 hover:bg-red-700">
+                            <AlertDialogAction onClick={() => handleDelete(user.email)} className="bg-red-600 hover:bg-red-700">
                               Excluir
                             </AlertDialogAction>
                           </AlertDialogFooter>

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 
 const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
   const { toast } = useToast();
@@ -20,7 +20,7 @@ const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
     name: '',
     cpf: '',
     telefone: '',
-    chavePix: '',
+    pix_key: '',
     banco: '',
     ativo: true,
   });
@@ -34,7 +34,7 @@ const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
         name: employee.name || '',
         cpf: employee.cpf || '',
         telefone: employee.telefone || '',
-        chavePix: employee.chavePix || '',
+        pix_key: employee.pix_key || employee.chavePix || '',
         banco: employee.banco || '',
         ativo: employee.ativo !== undefined ? employee.ativo : true,
       });
@@ -43,7 +43,7 @@ const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
         name: '',
         cpf: '',
         telefone: '',
-        chavePix: '',
+        pix_key: '',
         banco: '',
         ativo: true,
       });
@@ -75,27 +75,24 @@ const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
     e.preventDefault();
     setLoading(true);
 
-    let error;
-    if (isEditing) {
-      // We don't want to send the ID in the update payload itself.
-      const { id, ...updateData } = { ...formData, id: employee.id };
-      ({ error } = await supabase.from('employees').update(updateData).eq('id', id));
-    } else {
-      ({ error } = await supabase.from('employees').insert([formData]));
-    }
+    try {
+      if (isEditing) {
+        await replitDb.updateEmployee(employee.id, formData);
+      } else {
+        await replitDb.createEmployee(formData);
+      }
 
-    if (error) {
-       toast({
-        title: "Erro",
-        description: `Ocorreu um erro ao salvar o funcionário: ${error.message}`,
-        variant: "destructive",
-      });
-    } else {
       toast({
         title: `Funcionário ${isEditing ? 'atualizado' : 'cadastrado'}!`,
         description: "Os dados foram salvos com sucesso.",
       });
       onSubmitSuccess();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: `Ocorreu um erro ao salvar o funcionário: ${error.message}`,
+        variant: "destructive",
+      });
     }
     setLoading(false);
   };
@@ -144,11 +141,11 @@ const EmployeeForm = ({ isOpen, onClose, onSubmitSuccess, employee }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="chavePix">Chave PIX</Label>
+              <Label htmlFor="pix_key">Chave PIX</Label>
               <Input
-                id="chavePix"
-                value={formData.chavePix}
-                onChange={(e) => handleInputChange('chavePix', e.target.value)}
+                id="pix_key"
+                value={formData.pix_key}
+                onChange={(e) => handleInputChange('pix_key', e.target.value)}
                 placeholder="email@exemplo.com ou chave"
                 className="input-glow bg-white/10 border-white/20"
               />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/ReplitAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,12 +17,17 @@ const AuthorizedCompanies = () => {
     
     setLoading(true);
     try {
-      // Use the new RPC to get authorized companies
-      const { data, error } = await supabase.rpc('get_my_companies');
-
-      if (error) throw error;
+      const allCompanies = await replitDb.getAllCompanies();
       
-      setAuthorizedCompanies(data);
+      const authorizedIds = user.authorized_company_ids ? 
+        (typeof user.authorized_company_ids === 'string' ? JSON.parse(user.authorized_company_ids) : user.authorized_company_ids) 
+        : [];
+      
+      const authorized = allCompanies.filter(company => 
+        authorizedIds.includes(company.id) || authorizedIds.includes(company.id?.toString())
+      );
+      
+      setAuthorizedCompanies(authorized);
 
     } catch (error) {
       toast({
@@ -71,7 +76,7 @@ const AuthorizedCompanies = () => {
                     <Building className="w-8 h-8 text-green-400" />
                   </div>
                   <h3 className="font-semibold text-lg text-white">{company.name}</h3>
-                  <p className="text-sm text-gray-400">CNPJ: {company.cnpj}</p>
+                  <p className="text-sm text-gray-400">CNPJ: {company.cnpj || 'N/A'}</p>
                 </CardContent>
               </Card>
             </motion.div>

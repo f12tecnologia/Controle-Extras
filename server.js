@@ -219,14 +219,14 @@ app.get('/api/employees/:id', async (req, res) => {
 app.post('/api/employees', async (req, res) => {
   try {
     const id = `employee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const { name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo } = req.body;
+    const { name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo, pix_key, banco } = req.body;
 
     const result = await pool.query(
       `INSERT INTO employees (id, name, cpf, rg, endereco, cidade, estado, cep, telefone, email, 
-       data_nascimento, cargo, company_id, ativo, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+       data_nascimento, cargo, company_id, ativo, pix_key, banco, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
       [id, name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, 
-       company_id, ativo !== undefined ? ativo : true, new Date().toISOString()]
+       company_id, ativo !== undefined ? ativo : true, pix_key || '', banco || '', new Date().toISOString()]
     );
 
     res.json(result.rows[0]);
@@ -237,12 +237,13 @@ app.post('/api/employees', async (req, res) => {
 
 app.put('/api/employees/:id', async (req, res) => {
   try {
-    const { name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo } = req.body;
+    const { name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo, pix_key, banco } = req.body;
     const result = await pool.query(
       `UPDATE employees SET name = $1, cpf = $2, rg = $3, endereco = $4, cidade = $5, estado = $6, 
-       cep = $7, telefone = $8, email = $9, data_nascimento = $10, cargo = $11, company_id = $12, ativo = $13 
-       WHERE id = $14 RETURNING *`,
-      [name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo, req.params.id]
+       cep = $7, telefone = $8, email = $9, data_nascimento = $10, cargo = $11, company_id = $12, ativo = $13,
+       pix_key = $14, banco = $15
+       WHERE id = $16 RETURNING *`,
+      [name, cpf, rg, endereco, cidade, estado, cep, telefone, email, data_nascimento, cargo, company_id, ativo, pix_key || '', banco || '', req.params.id]
     );
 
     if (result.rows.length === 0) {

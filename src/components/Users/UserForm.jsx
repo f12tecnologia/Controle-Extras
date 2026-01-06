@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { useAuth } from '@/contexts/ReplitAuthContext';
 
 const UserForm = ({ isOpen, onClose, onSubmitSuccess, user }) => {
@@ -33,37 +33,31 @@ const UserForm = ({ isOpen, onClose, onSubmitSuccess, user }) => {
   const [loading, setLoading] = useState(false);
 
   const isEditing = !!user;
-  const isCurrentUserAdmin = currentUser?.user_metadata?.role === 'admin';
+  const isCurrentUserAdmin = currentUser?.role === 'admin';
 
   const fetchInitialData = useCallback(async () => {
-    // Fetch all companies for the form
-    const { data: companiesData, error: companiesError } = await supabase.from('companies_view').select('id, name').eq('ativa', true);
-    if (companiesError) {
-      toast({ title: "Erro ao buscar empresas", description: companiesError.message, variant: "destructive" });
-    } else {
-      setCompanies(companiesData || []);
+    try {
+      const companiesData = await replitDb.getAllCompanies();
+      setCompanies(companiesData.filter(c => c.ativa) || []);
+    } catch (error) {
+      toast({ title: "Erro ao buscar empresas", description: error.message, variant: "destructive" });
     }
 
-    // If editing, fetch the user's current authorized companies
     if (isEditing) {
-      const { data: authData, error: authError } = await supabase
-        .from('user_empresas')
-        .select('company_id')
-        .eq('user_id', user.id);
-      
-      const authorizedIds = authError ? [] : authData.map(item => item.company_id);
+      const authorizedIds = user.authorized_company_ids ? 
+        (typeof user.authorized_company_ids === 'string' ? JSON.parse(user.authorized_company_ids) : user.authorized_company_ids) 
+        : [];
 
       setFormData({
-        name: user.user_metadata?.name || '',
+        name: user.name || '',
         email: user.email || '',
         password: '',
-        role: user.user_metadata?.role || 'lançador',
-        setor: user.user_metadata?.setor || '',
+        role: user.role || 'lançador',
+        setor: user.setor || '',
         authorizedCompanyIds: authorizedIds,
-        active: !user.banned_until,
+        active: true,
       });
     } else {
-      // Reset for new user
       setFormData({
         name: '',
         email: '',
@@ -101,50 +95,22 @@ const UserForm = ({ isOpen, onClose, onSubmitSuccess, user }) => {
 
     try {
       if (isEditing) {
-        const body = {
-          userId: user.id,
-          role: formData.role,
+        await replitDb.updateUser(user.email, {
           name: formData.name,
+          role: formData.role,
           setor: formData.setor,
-          active: formData.active,
           authorizedCompanyIds: formData.authorizedCompanyIds,
-        };
-        if (formData.password) {
-          body.password = formData.password;
-        }
-
-        const { error } = await supabase.functions.invoke('update-user-role', { body });
-
-        if (error) throw new Error(error.message);
-
+        });
         toast({ title: "Usuário atualizado!", description: "Os dados foram salvos." });
       } else {
-        // For new users, create the user first
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        await replitDb.createUser({
           email: formData.email,
           password: formData.password,
-          options: {
-            data: {
-              name: formData.name,
-              role: formData.role,
-              setor: formData.setor,
-            },
-          },
+          name: formData.name,
+          role: formData.role,
+          setor: formData.setor,
+          authorizedCompanyIds: formData.authorizedCompanyIds,
         });
-        
-        if (signUpError) throw signUpError;
-        
-        // Then, link companies to the new user
-        const newUserId = signUpData.user.id;
-        if (formData.authorizedCompanyIds.length > 0) {
-            const companyLinks = formData.authorizedCompanyIds.map(companyId => ({
-                user_id: newUserId,
-                company_id: companyId
-            }));
-            const { error: linkError } = await supabase.from('user_empresas').insert(companyLinks);
-            if (linkError) throw linkError;
-        }
-
         toast({ title: "Usuário cadastrado!", description: "O novo usuário foi adicionado." });
       }
       onSubmitSuccess();

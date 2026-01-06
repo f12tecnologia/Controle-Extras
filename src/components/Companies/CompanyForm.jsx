@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 
 const CompanyForm = ({ company, onSave, children }) => {
   const [open, setOpen] = useState(false);
@@ -51,25 +51,24 @@ const CompanyForm = ({ company, onSave, children }) => {
     e.preventDefault();
     setLoading(true);
 
-    let error;
-    const dataToSave = { 
-      name: formData.name,
-      cnpj: formData.cnpj || null,
-      ativa: formData.ativa
-    };
+    try {
+      const dataToSave = { 
+        name: formData.name,
+        cnpj: formData.cnpj || null,
+        ativa: formData.ativa
+      };
 
-    if (isEditing) {
-      ({ error } = await supabase.from('companies').update(dataToSave).eq('id', company.id));
-    } else {
-      ({ error } = await supabase.from('companies').insert([dataToSave]));
-    }
+      if (isEditing) {
+        await replitDb.updateCompany(company.id, dataToSave);
+      } else {
+        await replitDb.createCompany(dataToSave);
+      }
 
-    if (error) {
-      toast({ title: "Erro ao salvar empresa", description: error.message, variant: "destructive" });
-    } else {
       toast({ title: `Empresa ${isEditing ? 'atualizada' : 'cadastrada'}!`, description: "Os dados foram salvos com sucesso." });
       onSave();
       setOpen(false);
+    } catch (error) {
+      toast({ title: "Erro ao salvar empresa", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   };

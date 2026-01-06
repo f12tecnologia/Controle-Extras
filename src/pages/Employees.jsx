@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 
 const Employees = () => {
   const { toast } = useToast();
@@ -28,11 +28,11 @@ const Employees = () => {
 
   const loadEmployees = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('employees').select('*').order('created_at', { ascending: false });
-    if (error) {
-      toast({ title: "Erro ao carregar funcionários", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const data = await replitDb.getAllEmployees();
       setEmployees(data);
+    } catch (error) {
+      toast({ title: "Erro ao carregar funcionários", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   }, [toast]);
@@ -53,15 +53,15 @@ const Employees = () => {
   };
 
   const handleDelete = async (id) => {
-    const { error } = await supabase.from('employees').delete().eq('id', id);
-    if (error) {
-      toast({ title: "Erro ao excluir funcionário", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await replitDb.deleteEmployee(id);
       toast({
         title: "Funcionário excluído",
         description: "O registro do funcionário foi removido com sucesso.",
       });
       loadEmployees();
+    } catch (error) {
+      toast({ title: "Erro ao excluir funcionário", description: error.message, variant: "destructive" });
     }
   };
 
@@ -152,7 +152,7 @@ const Employees = () => {
                       </div>
                        <div className="mt-2 text-sm">
                           <span className="text-gray-400">Chave PIX:</span>
-                          <p className="text-white">{employee.chavePix || 'N/A'}</p>
+                          <p className="text-white">{employee.pix_key || employee.chavePix || 'N/A'}</p>
                         </div>
                     </div>
                     <div className="flex space-x-2 ml-4">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/ReplitAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,16 +20,21 @@ const MyExtras = () => {
     const loadMyExtras = useCallback(async () => {
         if (!user) return;
         setLoadingExtras(true);
-        const { data, error } = await supabase
-            .from('extras')
-            .select('*, companies(name)')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-        if (error) {
+        try {
+            const data = await replitDb.getExtrasByUserId(user.id);
+            const companiesData = await replitDb.getAllCompanies();
+            
+            const extrasWithCompanies = data.map(extra => {
+                const company = companiesData.find(c => c.id === extra.company_id || c.id === extra.company_id?.toString());
+                return {
+                    ...extra,
+                    companies: company ? { name: company.name } : null
+                };
+            });
+            
+            setExtras(extrasWithCompanies);
+        } catch (error) {
             toast({ title: "Erro ao carregar extras", description: error.message, variant: "destructive" });
-        } else {
-            setExtras(data);
         }
         setLoadingExtras(false);
     }, [user, toast]);
@@ -42,9 +47,14 @@ const MyExtras = () => {
         try {
             const pdfUrl = await onDownload(extraId);
             if (pdfUrl) {
-                window.open(pdfUrl, '_blank');
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `recibo-${extraId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             } else {
-                toast({ title: "Recibo não encontrado", description: "O recibo para este extra ainda não foi gerado ou você não tem permissão para vê-lo.", variant: "destructive" });
+                toast({ title: "Recibo não encontrado", description: "O recibo para este extra ainda não foi gerado.", variant: "destructive" });
             }
         } catch (error) {
             toast({ title: "Erro ao baixar PDF", description: error.message, variant: "destructive" });
@@ -55,11 +65,11 @@ const MyExtras = () => {
         const lowerCaseStatus = (status || 'pendente').toLowerCase();
         switch (lowerCaseStatus) {
             case 'aprovado':
-                return <Badge className="bg-green-500/80 text-white">Aprovado</Badge>;
+                return <Badge className="bg-blue-500/80 text-white">Aprovado</Badge>;
             case 'rejeitado':
                 return <Badge variant="destructive">Rejeitado</Badge>;
             case 'ciente':
-                return <Badge className="bg-blue-500/80 text-white">Ciente</Badge>;
+                return <Badge className="bg-purple-500/80 text-white">Ciente</Badge>;
             case 'pendente':
             default:
                 return <Badge className="bg-amber-500/80 text-white">Pendente</Badge>;
@@ -100,7 +110,7 @@ const MyExtras = () => {
                                             {extra.companies?.name || 'Empresa não encontrada'}
                                         </CardTitle>
                                         <CardDescription className="text-gray-400 mt-1">
-                                            Data: {new Date(extra.data_evento).toLocaleDateString('pt-BR')} - R$ {(extra.valor || 0).toFixed(2)}
+                                            Data: {new Date(extra.data_evento).toLocaleDateString('pt-BR')} - R$ {parseFloat(extra.valor || 0).toFixed(2)}
                                         </CardDescription>
                                     </div>
                                     {getStatusBadge(extra.status)}
@@ -114,9 +124,6 @@ const MyExtras = () => {
                                             onClick={() => navigate(`/extras/edit/${extra.id}`)}
                                         >
                                             <Edit className="w-4 h-4 mr-2" /> Editar
-                                        </Button>
-                                        <Button variant="destructive" size="sm">
-                                            <Trash2 className="w-4 h-4 mr-2" /> Excluir
                                         </Button>
                                          {((extra.status || '').toLowerCase() === 'aprovado' || (extra.status || '').toLowerCase() === 'ciente') && (
                                             <Button size="sm" className="btn-primary" onClick={() => handleDownloadPDF(extra.id)}>

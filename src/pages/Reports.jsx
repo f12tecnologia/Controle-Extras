@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { useAuth } from '@/contexts/ReplitAuthContext';
 import ReportsFilters from '@/components/Reports/ReportsFilters.jsx';
 import ReportsStats from '@/components/Reports/ReportsStats.jsx';
@@ -27,53 +27,38 @@ const Reports = () => {
   const [reportType, setReportType] = useState('daily');
 
   const loadInitialData = useCallback(async () => {
-    // Fetch companies
-    const { data: companiesData, error: companiesError } = await supabase
-      .from('companies')
-      .select('id, name');
-    if (companiesError) {
-      console.error('Error fetching companies:', companiesError);
-    } else {
+    try {
+      const companiesData = await replitDb.getAllCompanies();
       setCompanies(companiesData);
-    }
 
-    // Fetch users (only gestor can see all users)
-    if (user?.user_metadata?.role === 'gestor') {
-       const { data: usersData , error: usersError } = await supabase.functions.invoke('list-users');
-        if (usersError) {
-            console.error('Error fetching users:', usersError);
-        } else {
-            setUsers(usersData.map(u => ({ id: u.id, email: u.email, name: u.user_metadata?.name })));
-        }
+      if (user?.role === 'gestor' || user?.role === 'admin') {
+        const usersData = await replitDb.getAllUsers();
+        setUsers(usersData.map(u => ({ id: u.id, email: u.email, name: u.name })));
+      }
+    } catch (error) {
+      console.error('Error loading initial data:', error);
     }
   }, [user]);
 
   const loadExtras = useCallback(async () => {
-    let query = supabase.from('extras').select(`
-      *,
-      companies (name),
-      employees (name)
-    `);
+    try {
+      const data = await replitDb.getExtrasWithDetails();
+      
+      const formattedData = data.map(d => ({
+        ...d,
+        empresa: d.company_name,
+        nomeExtra: d.employee_name,
+        userId: d.user_id,
+      }));
 
-    const { data, error } = await query;
-
-    if (error) {
+      setExtras(formattedData);
+    } catch (error) {
       toast({
         title: "Erro ao carregar extras",
         description: error.message,
         variant: "destructive",
       });
-      return;
     }
-    
-    const formattedData = data.map(d => ({
-        ...d,
-        empresa: d.companies?.name,
-        nomeExtra: d.employees?.name,
-        userId: d.user_id,
-    }));
-
-    setExtras(formattedData);
   }, [toast]);
 
   useEffect(() => {
@@ -96,11 +81,11 @@ const Reports = () => {
     }
 
     if (filters.company_id) {
-        filtered = filtered.filter(extra => extra.company_id === parseInt(filters.company_id));
+      filtered = filtered.filter(extra => extra.company_id === filters.company_id || extra.company_id === parseInt(filters.company_id));
     }
 
     if (filters.user_id) {
-        filtered = filtered.filter(extra => extra.user_id === filters.user_id);
+      filtered = filtered.filter(extra => extra.user_id === filters.user_id);
     }
 
     if (reportType === 'daily' && filters.startDate) {
@@ -162,14 +147,14 @@ const Reports = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
      worksheet['!cols'] = [
-        { wch: 12 }, // Data
-        { wch: 25 }, // Nome do Extra
-        { wch: 15 }, // Atração
-        { wch: 15 }, // Vaga
-        { wch: 15 }, // Horário
-        { wch: 15 }, // Valor
-        { wch: 20 }, // Empresa
-        { wch: 25 }, // Usuário
+        { wch: 12 },
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 25 },
     ];
     
     const workbook = XLSX.utils.book_new();
@@ -206,12 +191,12 @@ const Reports = () => {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     
     worksheet['!cols'] = [
-        { wch: 25 }, // Nome
-        { wch: 12 }, // Data(s)
-        { wch: 15 }, // Horário
-        { wch: 15 }, // Atração
-        { wch: 15 }, // Vaga
-        { wch: 15 }, // Valor Total
+        { wch: 25 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
     ];
 
     const workbook = XLSX.utils.book_new();

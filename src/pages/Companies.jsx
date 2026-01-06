@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { supabase } from '@/lib/customSupabaseClient';
+import { replitDb } from '@/lib/replitDbClient';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/ReplitAuthContext';
 
@@ -25,16 +25,16 @@ const Companies = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const userRole = user?.user_metadata?.role;
+  const userRole = user?.role;
   const canManage = userRole === 'gestor' || userRole === 'admin';
 
   const loadCompanies = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('companies_view').select('*').order('name', { ascending: true });
-    if (error) {
+    try {
+      const data = await replitDb.getAllCompanies();
+      setCompanies(data.sort((a, b) => a.name?.localeCompare(b.name)));
+    } catch (error) {
       toast({ title: "Erro ao carregar empresas", description: error.message, variant: "destructive" });
-    } else {
-      setCompanies(data);
     }
     setLoading(false);
   }, [toast]);
@@ -44,12 +44,12 @@ const Companies = () => {
   }, [loadCompanies]);
 
   const handleDelete = async (id) => {
-    const { error } = await supabase.from('companies').delete().eq('id', id);
-    if (error) {
-      toast({ title: "Erro ao excluir empresa", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await replitDb.deleteCompany(id);
       toast({ title: "Empresa excluída!", description: "O registro foi removido com sucesso." });
       loadCompanies();
+    } catch (error) {
+      toast({ title: "Erro ao excluir empresa", description: error.message, variant: "destructive" });
     }
   };
 

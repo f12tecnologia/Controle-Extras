@@ -243,7 +243,7 @@ export default defineConfig({
         server: {
                 cors: true,
                 host: '0.0.0.0',
-                port: 5000,
+                port: 5050,
                 headers: {
                         'Cross-Origin-Embedder-Policy': 'credentialless',
                 },

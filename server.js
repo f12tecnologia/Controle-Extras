@@ -1,3 +1,4 @@
+import './loadEnv.js';
 import express from 'express';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -10,15 +11,42 @@ const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
-// Configurar conexão com PostgreSQL
+if (!process.env.EXTERNAL_DATABASE_URL) {
+  console.error('❌ EXTERNAL_DATABASE_URL não definida. Configure no arquivo .env');
+  process.exit(1);
+}
+
+// SSL: DB_SSL=true|require força SSL; false|disable desliga; auto respeita sslmode= da URL
+function getPgSslConfig() {
+  const mode = (process.env.DB_SSL || 'auto').toLowerCase();
+  const url = process.env.EXTERNAL_DATABASE_URL || '';
+
+  if (mode === 'false' || mode === 'disable' || mode === '0') return false;
+  if (mode === 'true' || mode === 'require' || mode === '1') {
+    return { rejectUnauthorized: false };
+  }
+  if (/sslmode=disable/i.test(url)) return false;
+  if (/sslmode=(require|verify-ca|verify-full)/i.test(url)) {
+    return { rejectUnauthorized: false };
+  }
+  // Banco atual externo não exige SSL
+  return false;
+}
+
+// Configurar conexão com PostgreSQL (URL ativa do .env)
 const pool = new Pool({
   connectionString: process.env.EXTERNAL_DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: getPgSslConfig()
 });
+
+try {
+  const dbHost = new URL(process.env.EXTERNAL_DATABASE_URL).host;
+  console.log(`🗄️  Banco ativo: ${dbHost}`);
+} catch {
+  console.log('🗄️  Banco ativo: EXTERNAL_DATABASE_URL');
+}
 
 // Testar conexão e criar tabelas necessárias
 pool.query('SELECT NOW()', async (err, res) => {
@@ -52,8 +80,45 @@ pool.query('SELECT NOW()', async (err, res) => {
     } catch (err) {
       console.log('ℹ️ Colunas pix_key e banco já existem');
     }
+
+    // Garante superadmin com acesso irrestrito (role admin)
+    try {
+      await ensureSuperAdmin();
+    } catch (seedErr) {
+      console.error('❌ Erro ao garantir superadmin:', seedErr.message);
+    }
   }
 });
+
+async function ensureSuperAdmin() {
+  const email = process.env.SUPERADMIN_EMAIL || 'admin@intelfoz.com.br';
+  const password = process.env.SUPERADMIN_PASSWORD || 'Eo@230578.';
+  const name = process.env.SUPERADMIN_NAME || 'Super Admin';
+  const setor = 'Administração';
+  const role = 'admin';
+  const authorizedCompanyIds = JSON.stringify([]);
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+
+  if (existing.rows.length > 0) {
+    await pool.query(
+      `UPDATE users
+       SET password = $1, name = $2, role = $3, setor = $4, authorized_company_ids = $5
+       WHERE email = $6`,
+      [hashedPassword, name, role, setor, authorizedCompanyIds, email]
+    );
+    console.log(`✅ Superadmin atualizado: ${email}`);
+  } else {
+    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await pool.query(
+      `INSERT INTO users (id, email, password, name, role, setor, authorized_company_ids, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, email, hashedPassword, name, role, setor, authorizedCompanyIds, new Date().toISOString()]
+    );
+    console.log(`✅ Superadmin criado: ${email}`);
+  }
+}
 
 // Configurar CORS
 app.use(cors({
@@ -69,6 +134,15 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
+});
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', database: 'connected' });
+  } catch (error) {
+    res.status(503).json({ status: 'error', database: 'disconnected', error: error.message });
+  }
 });
 
 // User endpoints

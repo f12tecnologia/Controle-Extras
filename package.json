@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js & vite --host 0.0.0.0 --port 5000",
-    "dev:frontend": "vite --host 0.0.0.0 --port 5000",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "vite --host 0.0.0.0 --port 5050",
     "dev:backend": "node server.js",
     "build": "node tools/generate-llms.js || true && vite build",
+    "start": "node server.js",
+    "create-superadmin": "node create-superadmin.js",
     "preview": "vite preview --host 0.0.0.0 --port 5000"
   },
   "dependencies": {
@@ -55,6 +57,7 @@
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^10.0.3",
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",
     "postcss": "^8.4.31",

@@ -1,13 +1,6 @@
 import { buildReceiptPDF } from '@/helpers/pdf';
 
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:3001/api';
-    }
-  }
-  return '/api';
-};
+const getApiUrl = () => '/api';
 
 async function fetchExtraForReceipt(extraId) {
   const API_URL = getApiUrl();

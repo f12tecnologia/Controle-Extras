@@ -1,4 +1,5 @@
 
+import './loadEnv.js';
 import pg from 'pg';
 import Database from '@replit/database';
 

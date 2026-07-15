@@ -1,0 +1,5 @@
+EXTERNAL_DATABASE_URL=postgresql://postgres:TB3RBe7aXSn2P4iE@72.60.255.189:5432/Dreams_Extras
+DB_SSL=false
+SUPERADMIN_EMAIL=admin@intelfoz.com.br
+SUPERADMIN_PASSWORD=Eo@230578.
+SUPERADMIN_NAME=Super Admin

@@ -1,5 +1,5 @@
 # ---- Build do frontend ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -15,18 +15,22 @@ COPY tools ./tools
 RUN npm run build
 
 # ---- Runtime (API + frontend estático) ----
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+# NODE_ENV só depois do install — evita conflito com npm ci --omit=dev
 ENV PORT=5000
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund \
+  && npm cache clean --force
 
 COPY server.js loadEnv.js ./
+COPY create-superadmin.js ./
 COPY --from=build /app/dist ./dist
+
+ENV NODE_ENV=production
 
 EXPOSE 5000
 
